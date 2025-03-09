@@ -1,0 +1,12 @@
+[package]
+name = "picocaml"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "picocaml"
+path = "src/bin/*.rs"
+
+[dependencies]
+anyhow = "1.0.97"
+thiserror = "2.0.12"
