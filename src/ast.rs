@@ -1,10 +1,10 @@
-use crate::adapter::{RBool, RInteger, Variable};
+use crate::adapter::{RBool, RInteger, Symbol};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expression {
     Integer(RInteger),
     Bool(RBool),
-    Variable(Variable),
+    Variable(Symbol),
     Plus {
         e1: Box<Expression>,
         e2: Box<Expression>,
@@ -27,12 +27,12 @@ pub enum Expression {
         alternative: Box<Expression>,
     },
     Let {
-        variable: Variable,
+        variable: Symbol,
         bound: Box<Expression>,
         body: Box<Expression>,
     },
     Fun {
-        variable: Variable,
+        parameter: Symbol,
         body: Box<Expression>,
     },
     App {
@@ -40,7 +40,7 @@ pub enum Expression {
         argument: Box<Expression>,
     },
     LetRec {
-        variable: Variable,
+        variable: Symbol,
         bound_function: Box<Expression>,
         body: Box<Expression>,
     },
@@ -52,6 +52,6 @@ pub enum Expression {
     Match {
         scrutinee: Box<Expression>,
         nil_case: Box<Expression>,
-        cons_case: Option<(Variable, Variable, Box<Expression>)>,
+        cons_case: (Symbol, Symbol, Box<Expression>),
     },
 }

@@ -1,7 +1,7 @@
 use crate::{
-    adapter::{RBool, RInteger, Variable},
+    adapter::{RBool, RInteger, Symbol},
     ast::Expression,
-    eval::Environment,
+    eval::Structure,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -9,11 +9,16 @@ pub enum Value {
     Integer(RInteger),
     Bool(RBool),
     Closure {
-        variable: Variable,
-        body: Box<Expression>,
-        environment: Environment,
+        structure: Structure,
+        parameter: Symbol,
+        body: Expression,
     },
-    RecClosure,
+    RecClosure {
+        structure: Structure,
+        call_name: Symbol,
+        parameter: Symbol,
+        body: Expression,
+    },
     Nil,
     Cons {
         car: Box<Value>,
