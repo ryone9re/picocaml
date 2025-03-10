@@ -5,23 +5,23 @@
 ### 文法
 
 ```bnf
-<program> ::= <expr>
+<program> ::= <expression>
 
-<expr> ::= <int_literal>
+<expression> ::= <integer_literal>
          | <bool_literal>
          | <identifier>
-         | <expr> <op> <expr>
-         | "if" <expr> "then" <expr> "else" <expr>
-         | "let" <identifier> "=" <expr> "in" <expr>
-         | "fun" <identifier> "->" <expr>
-         | <expr> <expr>
-         | "let" "rec" <identifier> "=" "fun" <identifier> "->" <expr> "in" <expr>
+         | <expression> <op> <expression>
+         | "if" <expression> "then" <expression> "else" <expression>
+         | "let" <identifier> "=" <expression> "in" <expression>
+         | "fun" <identifier> "->" <expression>
+         | <expression> <expression>
+         | "let" "rec" <identifier> "=" "fun" <identifier> "->" <expression> "in" <expression>
          | <nil>
-         | <expr> "::" <expr>
-         | "match" <expr> "with" <nil> "->" <expr> ["|" <identifier> "::" <identifier> "->" <expr>]
-         | "(" <expr> ")"
+         | <expression> "::" <expression>
+         | "match" <expression> "with" <nil> "->" <expression> ["|" <identifier> "::" <identifier> "->" <expression>]
+         | "(" <expression> ")"
 
-<int_literal> ::= ["-"] <digit> {<digit>}
+<integer_literal> ::= ["-"] <digit> {<digit>}
 <digit> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
 
 <bool_literal> ::= "true" | "false"
