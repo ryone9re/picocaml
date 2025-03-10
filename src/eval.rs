@@ -34,8 +34,6 @@ impl Structure {
 }
 
 pub fn eval(structure: Structure, expression: Expression) -> Result<(Structure, Value)> {
-    dbg!(&structure);
-    dbg!(&expression);
     let (new_structure, value) = match expression {
         Expression::Integer(n) => eval_integer(structure, n)?,
         Expression::Bool(b) => eval_bool(structure, b)?,
@@ -294,11 +292,12 @@ mod tests {
     fn test_simple_arithmetic() {
         // 3 + 5 * 2
         let expr = Expression::Plus {
-            e1: Box::new(Expression::Integer(3)),
-            e2: Box::new(Expression::Times {
-                e1: Box::new(Expression::Integer(5)),
-                e2: Box::new(Expression::Integer(2)),
-            }),
+            e1: Expression::Integer(3).into(),
+            e2: Expression::Times {
+                e1: Expression::Integer(5).into(),
+                e2: Expression::Integer(2).into(),
+            }
+            .into(),
         };
 
         let result = eval(Structure::default(), expr);
@@ -313,11 +312,12 @@ mod tests {
         // let x = 10 in x + 5
         let expr = Expression::Let {
             variable: "x".to_string(),
-            bound: Box::new(Expression::Integer(10)),
-            body: Box::new(Expression::Plus {
-                e1: Box::new(Expression::Variable("x".to_string())),
-                e2: Box::new(Expression::Integer(5)),
-            }),
+            bound: Expression::Integer(10).into(),
+            body: Expression::Plus {
+                e1: Expression::Variable("x".to_string()).into(),
+                e2: Expression::Integer(5).into(),
+            }
+            .into(),
         };
 
         let result = eval(Structure::default(), expr);
@@ -331,12 +331,13 @@ mod tests {
     fn test_if_expression() {
         // if 5 < 10 then 20 else 30
         let expr = Expression::If {
-            predicate: Box::new(Expression::LessThan {
-                e1: Box::new(Expression::Integer(5)),
-                e2: Box::new(Expression::Integer(10)),
-            }),
-            consequent: Box::new(Expression::Integer(20)),
-            alternative: Box::new(Expression::Integer(30)),
+            predicate: Expression::LessThan {
+                e1: Expression::Integer(5).into(),
+                e2: Expression::Integer(10).into(),
+            }
+            .into(),
+            consequent: Expression::Integer(20).into(),
+            alternative: Expression::Integer(30).into(),
         };
 
         let result = eval(Structure::default(), expr);
@@ -350,14 +351,16 @@ mod tests {
     fn test_function_application() {
         // (fun x -> x + 1) 5
         let expr = Expression::App {
-            function: Box::new(Expression::Fun {
+            function: Expression::Fun {
                 parameter: "x".to_string(),
-                body: Box::new(Expression::Plus {
-                    e1: Box::new(Expression::Variable("x".to_string())),
-                    e2: Box::new(Expression::Integer(1)),
-                }),
-            }),
-            argument: Box::new(Expression::Integer(5)),
+                body: Expression::Plus {
+                    e1: Expression::Variable("x".to_string()).into(),
+                    e2: Expression::Integer(1).into(),
+                }
+                .into(),
+            }
+            .into(),
+            argument: Expression::Integer(5).into(),
         };
 
         let result = eval(Structure::default(), expr);
@@ -372,30 +375,37 @@ mod tests {
         // let rec fact = fun n -> if n < 2 then 1 else n * fact (n - 1) in fact 5
         let expr = Expression::LetRec {
             variable: "fact".to_string(),
-            bound_function: Box::new(Expression::Fun {
+            bound_function: Expression::Fun {
                 parameter: "n".to_string(),
-                body: Box::new(Expression::If {
-                    predicate: Box::new(Expression::LessThan {
-                        e1: Box::new(Expression::Variable("n".to_string())),
-                        e2: Box::new(Expression::Integer(2)),
-                    }),
-                    consequent: Box::new(Expression::Integer(1)),
-                    alternative: Box::new(Expression::Times {
-                        e1: Box::new(Expression::Variable("n".to_string())),
-                        e2: Box::new(Expression::App {
-                            function: Box::new(Expression::Variable("fact".to_string())),
-                            argument: Box::new(Expression::Minus {
-                                e1: Box::new(Expression::Variable("n".to_string())),
-                                e2: Box::new(Expression::Integer(1)),
-                            }),
-                        }),
-                    }),
-                }),
-            }),
-            body: Box::new(Expression::App {
-                function: Box::new(Expression::Variable("fact".to_string())),
-                argument: Box::new(Expression::Integer(5)),
-            }),
+                body: Expression::If {
+                    predicate: Expression::LessThan {
+                        e1: Expression::Variable("n".to_string()).into(),
+                        e2: Expression::Integer(2).into(),
+                    }
+                    .into(),
+                    consequent: Expression::Integer(1).into(),
+                    alternative: Expression::Times {
+                        e1: Expression::Variable("n".to_string()).into(),
+                        e2: Expression::App {
+                            function: Expression::Variable("fact".to_string()).into(),
+                            argument: Expression::Minus {
+                                e1: Expression::Variable("n".to_string()).into(),
+                                e2: Expression::Integer(1).into(),
+                            }
+                            .into(),
+                        }
+                        .into(),
+                    }
+                    .into(),
+                }
+                .into(),
+            }
+            .into(),
+            body: Expression::App {
+                function: Expression::Variable("fact".to_string()).into(),
+                argument: Expression::Integer(5).into(),
+            }
+            .into(),
         };
 
         let result = eval(Structure::default(), expr);
@@ -409,18 +419,20 @@ mod tests {
     fn test_list_operations() {
         // match 1::2::[] with [] -> 0 | hd::tl -> hd
         let expr = Expression::Match {
-            scrutinee: Box::new(Expression::Cons {
-                car: Box::new(Expression::Integer(1)),
-                cdr: Box::new(Expression::Cons {
-                    car: Box::new(Expression::Integer(2)),
-                    cdr: Box::new(Expression::Nil),
-                }),
-            }),
-            nil_case: Box::new(Expression::Integer(0)),
+            scrutinee: Expression::Cons {
+                car: Expression::Integer(1).into(),
+                cdr: Expression::Cons {
+                    car: Expression::Integer(2).into(),
+                    cdr: Expression::Nil.into(),
+                }
+                .into(),
+            }
+            .into(),
+            nil_case: Expression::Integer(0).into(),
             cons_pattern: (
                 "hd".to_string(),
                 "tl".to_string(),
-                Box::new(Expression::Variable("hd".to_string())),
+                Expression::Variable("hd".to_string()).into(),
             ),
         };
 
