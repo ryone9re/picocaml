@@ -1,15 +1,12 @@
-use std::{
-    collections::HashMap,
-    ops::{Add, Mul, Sub},
-};
+use std::ops::{Add, Mul, Sub};
 
 use anyhow::{Result, anyhow, bail};
 use thiserror::Error;
 
 use crate::{
-    adapter::{RBool, RInteger, Symbol},
     ast::Expression,
-    value::Value,
+    types::{RBool, RInteger, Symbol, TypeEnvironment},
+    value::{Environment, Value},
 };
 
 #[derive(Debug, Error)]
@@ -21,10 +18,6 @@ enum EvalError {
     #[error("Type error!")]
     TypeError,
 }
-
-type Environment = HashMap<Symbol, Value>;
-
-type TypeEnvironment = HashMap<Symbol, ()>;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Structure {

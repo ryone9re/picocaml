@@ -1,4 +1,4 @@
-use crate::adapter::{RBool, RInteger, Symbol};
+use crate::types::{RBool, RInteger, Symbol};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expression {
