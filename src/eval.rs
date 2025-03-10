@@ -22,7 +22,7 @@ enum EvalError {
     TypeError,
 }
 
-type Environment = HashMap<Symbol, Box<Value>>;
+type Environment = HashMap<Symbol, Value>;
 
 type TypeEnvironment = HashMap<Symbol, ()>;
 
@@ -33,14 +33,14 @@ pub struct Structure {
 }
 
 impl Structure {
-    fn assign_variable(self, variable: Symbol, value: Box<Value>) -> Result<Structure> {
+    fn assign_variable(self, variable: Symbol, value: Value) -> Result<Structure> {
         let mut new_structure = self.clone();
         new_structure.environment.insert(variable, value);
         Ok(new_structure)
     }
 }
 
-pub fn eval(structure: Structure, expression: Expression) -> Result<(Structure, Box<Value>)> {
+pub fn eval(structure: Structure, expression: Expression) -> Result<(Structure, Value)> {
     dbg!(&structure);
     dbg!(&expression);
     let (new_structure, value) = match expression {
@@ -73,22 +73,22 @@ pub fn eval(structure: Structure, expression: Expression) -> Result<(Structure, 
         Expression::Match {
             scrutinee,
             nil_case,
-            cons_case,
-        } => eval_match(structure, *scrutinee, *nil_case, cons_case)?,
+            cons_pattern: (car, cdr, cons_case),
+        } => eval_match(structure, *scrutinee, *nil_case, (car, cdr, *cons_case))?,
     };
 
     Ok((new_structure, value))
 }
 
-fn eval_integer(structure: Structure, n: RInteger) -> Result<(Structure, Box<Value>)> {
-    Ok((structure, Value::Integer(n).into()))
+fn eval_integer(structure: Structure, n: RInteger) -> Result<(Structure, Value)> {
+    Ok((structure, Value::Integer(n)))
 }
 
-fn eval_bool(structure: Structure, b: RBool) -> Result<(Structure, Box<Value>)> {
-    Ok((structure, Value::Bool(b).into()))
+fn eval_bool(structure: Structure, b: RBool) -> Result<(Structure, Value)> {
+    Ok((structure, Value::Bool(b)))
 }
 
-fn eval_variable(structure: Structure, variable: Symbol) -> Result<(Structure, Box<Value>)> {
+fn eval_variable(structure: Structure, variable: Symbol) -> Result<(Structure, Value)> {
     let value = structure
         .environment
         .get(&variable)
@@ -98,61 +98,45 @@ fn eval_variable(structure: Structure, variable: Symbol) -> Result<(Structure, B
     Ok((structure, value))
 }
 
-fn eval_plus(
-    structure: Structure,
-    e1: Expression,
-    e2: Expression,
-) -> Result<(Structure, Box<Value>)> {
+fn eval_plus(structure: Structure, e1: Expression, e2: Expression) -> Result<(Structure, Value)> {
     let (_, e1) = eval(structure.clone(), e1)?;
     let (_, e2) = eval(structure.clone(), e2)?;
 
-    if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (*e1, *e2) {
-        return Ok((structure, Value::Integer(e1_value.add(e2_value)).into()));
+    if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (e1, e2) {
+        return Ok((structure, Value::Integer(e1_value.add(e2_value))));
     }
 
     bail!(EvalError::InvalidExpression)
 }
 
-fn eval_minus(
-    structure: Structure,
-    e1: Expression,
-    e2: Expression,
-) -> Result<(Structure, Box<Value>)> {
+fn eval_minus(structure: Structure, e1: Expression, e2: Expression) -> Result<(Structure, Value)> {
     let (_, e1) = eval(structure.clone(), e1)?;
     let (_, e2) = eval(structure.clone(), e2)?;
 
-    if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (*e1, *e2) {
-        return Ok((structure, Value::Integer(e1_value.sub(e2_value)).into()));
+    if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (e1, e2) {
+        return Ok((structure, Value::Integer(e1_value.sub(e2_value))));
     }
 
     bail!(EvalError::InvalidExpression)
 }
 
-fn eval_times(
-    structure: Structure,
-    e1: Expression,
-    e2: Expression,
-) -> Result<(Structure, Box<Value>)> {
+fn eval_times(structure: Structure, e1: Expression, e2: Expression) -> Result<(Structure, Value)> {
     let (_, e1) = eval(structure.clone(), e1)?;
     let (_, e2) = eval(structure.clone(), e2)?;
 
-    if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (*e1, *e2) {
-        return Ok((structure, Value::Integer(e1_value.mul(e2_value)).into()));
+    if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (e1, e2) {
+        return Ok((structure, Value::Integer(e1_value.mul(e2_value))));
     }
 
     bail!(EvalError::InvalidExpression)
 }
 
-fn eval_lt(
-    structure: Structure,
-    e1: Expression,
-    e2: Expression,
-) -> Result<(Structure, Box<Value>)> {
+fn eval_lt(structure: Structure, e1: Expression, e2: Expression) -> Result<(Structure, Value)> {
     let (_, e1) = eval(structure.clone(), e1)?;
     let (_, e2) = eval(structure.clone(), e2)?;
 
-    if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (*e1, *e2) {
-        return Ok((structure, Value::Bool(e1_value.lt(&e2_value)).into()));
+    if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (e1, e2) {
+        return Ok((structure, Value::Bool(e1_value.lt(&e2_value))));
     }
 
     bail!(EvalError::InvalidExpression)
@@ -163,10 +147,10 @@ fn eval_if(
     predicate: Expression,
     consequent: Expression,
     alternative: Expression,
-) -> Result<(Structure, Box<Value>)> {
+) -> Result<(Structure, Value)> {
     let (_, predicate) = eval(structure.clone(), predicate)?;
 
-    match *predicate {
+    match predicate {
         Value::Bool(b) if b => eval(structure, consequent),
         Value::Bool(b) if !b => eval(structure, alternative),
         _ => bail!(EvalError::TypeError),
@@ -178,7 +162,7 @@ fn eval_let(
     variable: Symbol,
     bound: Expression,
     body: Expression,
-) -> Result<(Structure, Box<Value>)> {
+) -> Result<(Structure, Value)> {
     let (_, bound) = eval(structure.clone(), bound)?;
     let new_structure = structure.assign_variable(variable, bound)?;
 
@@ -189,7 +173,7 @@ fn eval_fun(
     structure: Structure,
     parameter: Symbol,
     body: Expression,
-) -> Result<(Structure, Box<Value>)> {
+) -> Result<(Structure, Value)> {
     let captured_structure = structure.clone();
 
     Ok((
@@ -198,8 +182,7 @@ fn eval_fun(
             structure: captured_structure,
             parameter,
             body,
-        }
-        .into(),
+        },
     ))
 }
 
@@ -207,11 +190,11 @@ fn eval_app(
     structure: Structure,
     function: Expression,
     argument: Expression,
-) -> Result<(Structure, Box<Value>)> {
+) -> Result<(Structure, Value)> {
     let (_, closure) = eval(structure.clone(), function)?;
     let (_, argument) = eval(structure.clone(), argument)?;
 
-    match *closure {
+    match closure {
         Value::Closure {
             structure,
             parameter,
@@ -233,7 +216,7 @@ fn eval_app(
                 parameter: parameter.clone(),
                 body: body.clone(),
             };
-            let structure = structure.assign_variable(call_name, rec_closure.into())?;
+            let structure = structure.assign_variable(call_name, rec_closure)?;
             let captured_structure = structure.assign_variable(parameter, argument)?;
 
             eval(captured_structure, body)
@@ -247,7 +230,7 @@ fn eval_let_rec(
     variable: Symbol,
     bound_function: Expression,
     body: Expression,
-) -> Result<(Structure, Box<Value>)> {
+) -> Result<(Structure, Value)> {
     if let Expression::Fun {
         parameter,
         body: function_body,
@@ -262,8 +245,7 @@ fn eval_let_rec(
                 call_name,
                 parameter,
                 body: *function_body,
-            }
-            .into(),
+            },
         )?;
 
         return eval(structure, body);
@@ -272,38 +254,40 @@ fn eval_let_rec(
     eval(structure, body)
 }
 
-fn eval_nil(structure: Structure) -> Result<(Structure, Box<Value>)> {
-    Ok((structure, Value::Nil.into()))
+fn eval_nil(structure: Structure) -> Result<(Structure, Value)> {
+    Ok((structure, Value::Nil))
 }
 
-fn eval_cons(
-    structure: Structure,
-    car: Expression,
-    cdr: Expression,
-) -> Result<(Structure, Box<Value>)> {
+fn eval_cons(structure: Structure, car: Expression, cdr: Expression) -> Result<(Structure, Value)> {
     let (_, car) = eval(structure.clone(), car)?;
     let (_, cdr) = eval(structure.clone(), cdr)?;
 
-    Ok((structure, Value::Cons { car, cdr }.into()))
+    Ok((
+        structure,
+        Value::Cons {
+            car: car.into(),
+            cdr: cdr.into(),
+        },
+    ))
 }
 
 fn eval_match(
     structure: Structure,
     scrutinee: Expression,
     nil_case: Expression,
-    cons_case: (Symbol, Symbol, Box<Expression>),
-) -> Result<(Structure, Box<Value>)> {
+    cons_pattern: (Symbol, Symbol, Expression),
+) -> Result<(Structure, Value)> {
     let (_, pattern) = eval(structure.clone(), scrutinee)?;
 
-    match *pattern {
+    match pattern {
         Value::Nil => eval(structure, nil_case),
         Value::Cons { car, cdr } => {
-            let (car_variable, cdr_variable, expression) = cons_case;
+            let (car_variable, cdr_variable, cons_case) = cons_pattern;
             let structure = structure
-                .assign_variable(car_variable, car)?
-                .assign_variable(cdr_variable, cdr)?;
+                .assign_variable(car_variable, *car)?
+                .assign_variable(cdr_variable, *cdr)?;
 
-            eval(structure, *expression)
+            eval(structure, cons_case)
         }
         _ => bail!(EvalError::InvalidExpression),
     }
@@ -328,7 +312,7 @@ mod tests {
 
         assert!(result.is_ok());
         let value = result.unwrap().1;
-        assert!(matches!(*value, Value::Integer(13)));
+        assert!(matches!(value, Value::Integer(13)));
     }
 
     #[test]
@@ -347,7 +331,7 @@ mod tests {
 
         assert!(result.is_ok());
         let value = result.unwrap().1;
-        assert!(matches!(*value, Value::Integer(15)));
+        assert!(matches!(value, Value::Integer(15)));
     }
 
     #[test]
@@ -366,7 +350,7 @@ mod tests {
 
         assert!(result.is_ok());
         let value = result.unwrap().1;
-        assert!(matches!(*value, Value::Integer(20)));
+        assert!(matches!(value, Value::Integer(20)));
     }
 
     #[test]
@@ -387,7 +371,7 @@ mod tests {
 
         assert!(result.is_ok());
         let value = result.unwrap().1;
-        assert!(matches!(*value, Value::Integer(6)));
+        assert!(matches!(value, Value::Integer(6)));
     }
 
     #[test]
@@ -425,7 +409,7 @@ mod tests {
 
         assert!(result.is_ok());
         let value = result.unwrap().1;
-        assert!(matches!(*value, Value::Integer(120)));
+        assert!(matches!(value, Value::Integer(120)));
     }
 
     #[test]
@@ -440,7 +424,7 @@ mod tests {
                 }),
             }),
             nil_case: Box::new(Expression::Integer(0)),
-            cons_case: (
+            cons_pattern: (
                 "hd".to_string(),
                 "tl".to_string(),
                 Box::new(Expression::Variable("hd".to_string())),
@@ -451,6 +435,6 @@ mod tests {
 
         assert!(result.is_ok());
         let value = result.unwrap().1;
-        assert!(matches!(*value, Value::Integer(1)));
+        assert!(matches!(value, Value::Integer(1)));
     }
 }

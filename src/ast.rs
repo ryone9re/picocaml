@@ -52,6 +52,6 @@ pub enum Expression {
     Match {
         scrutinee: Box<Expression>,
         nil_case: Box<Expression>,
-        cons_case: (Symbol, Symbol, Box<Expression>),
+        cons_pattern: (Symbol, Symbol, Box<Expression>),
     },
 }
