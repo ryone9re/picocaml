@@ -13,8 +13,8 @@ pub struct Structure {
 }
 
 impl Structure {
-    pub fn assign_variable(self, variable: Symbol, value: Value) -> Result<Self> {
-        let new_environment = self.environment.assign_variable(variable, value)?;
+    pub fn bind_variable(self, variable: Symbol, value: Value) -> Result<Self> {
+        let new_environment = self.environment.bind(variable, value)?;
         let new_type_environment = self.type_environment.clone();
 
         Ok(Self {
@@ -24,6 +24,6 @@ impl Structure {
     }
 
     pub fn get_variable_value(&self, variable: &Symbol) -> Option<Value> {
-        self.environment.get_variable_value(variable)
+        self.environment.get(variable)
     }
 }

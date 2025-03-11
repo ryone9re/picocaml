@@ -140,7 +140,7 @@ fn eval_let(
     body: Expression,
 ) -> Result<(Structure, Value)> {
     let (_, bound) = eval(structure.clone(), bound)?;
-    let new_structure = structure.assign_variable(variable, bound)?;
+    let new_structure = structure.bind_variable(variable, bound)?;
 
     eval(new_structure, body)
 }
@@ -176,7 +176,7 @@ fn eval_app(
             parameter,
             body,
         } => {
-            let captured_structure = structure.assign_variable(parameter, argument)?;
+            let captured_structure = structure.bind_variable(parameter, argument)?;
 
             eval(captured_structure, body)
         }
@@ -192,8 +192,8 @@ fn eval_app(
                 parameter: parameter.clone(),
                 body: body.clone(),
             };
-            let structure = structure.assign_variable(call_name, rec_closure)?;
-            let captured_structure = structure.assign_variable(parameter, argument)?;
+            let structure = structure.bind_variable(call_name, rec_closure)?;
+            let captured_structure = structure.bind_variable(parameter, argument)?;
 
             eval(captured_structure, body)
         }
@@ -214,7 +214,7 @@ fn eval_let_rec(
     {
         let captured_structure = structure.clone();
         let call_name = variable.clone();
-        let structure = structure.assign_variable(
+        let structure = structure.bind_variable(
             variable,
             Value::RecClosure {
                 structure: captured_structure,
@@ -260,8 +260,8 @@ fn eval_match(
         Value::Cons { car, cdr } => {
             let (car_variable, cdr_variable, cons_case) = cons_pattern;
             let structure = structure
-                .assign_variable(car_variable, *car)?
-                .assign_variable(cdr_variable, *cdr)?;
+                .bind_variable(car_variable, *car)?
+                .bind_variable(cdr_variable, *cdr)?;
 
             eval(structure, cons_case)
         }

@@ -10,13 +10,13 @@ pub struct Environment {
 }
 
 impl Environment {
-    pub fn assign_variable(self, variable: Symbol, value: Value) -> Result<Self> {
+    pub fn bind(self, variable: Symbol, value: Value) -> Result<Self> {
         let mut new = self.clone();
         new.variables.insert(variable, value);
         Ok(new)
     }
 
-    pub fn get_variable_value(&self, variable: &Symbol) -> Option<Value> {
+    pub fn get(&self, variable: &Symbol) -> Option<Value> {
         self.variables.get(variable).cloned()
     }
 }
