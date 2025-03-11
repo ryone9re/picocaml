@@ -7,10 +7,6 @@ edition = "2024"
 name = "picocaml"
 path = "src/libs/lib.rs"
 
-[[bin]]
-name = "picocaml"
-path = "src/bin/*.rs"
-
 [dependencies]
 anyhow = "1.0.97"
 thiserror = "2.0.12"
