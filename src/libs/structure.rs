@@ -13,13 +13,17 @@ pub struct Structure {
 }
 
 impl Structure {
-    pub fn assign_variable(self, variable: Symbol, value: Value) -> Result<Structure> {
-        let mut new_structure = self.clone();
-        new_structure.environment.insert(variable, value);
-        Ok(new_structure)
+    pub fn assign_variable(self, variable: Symbol, value: Value) -> Result<Self> {
+        let new_environment = self.environment.assign_variable(variable, value)?;
+        let new_type_environment = self.type_environment.clone();
+
+        Ok(Self {
+            environment: new_environment,
+            type_environment: new_type_environment,
+        })
     }
 
     pub fn get_variable_value(&self, variable: &Symbol) -> Option<Value> {
-        self.environment.get(variable).cloned()
+        self.environment.get_variable_value(variable)
     }
 }

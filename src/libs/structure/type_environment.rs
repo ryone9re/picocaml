@@ -1,5 +1,4 @@
-use std::collections::HashMap;
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+pub struct TypeEnvironment {}
 
-use crate::adapter::Symbol;
-
-pub type TypeEnvironment = HashMap<Symbol, ()>;
+impl TypeEnvironment {}
