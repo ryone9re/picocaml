@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 
-use crate::{adapter::Symbol, value::Value};
+use crate::{adapter::Symbol, syntax::value::Value};
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Environment {

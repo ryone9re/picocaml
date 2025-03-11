@@ -1,7 +1,7 @@
 mod environment;
 mod type_environment;
 
-use crate::{adapter::Symbol, value::Value};
+use crate::{adapter::Symbol, syntax::value::Value};
 use anyhow::Result;
 use environment::Environment;
 use type_environment::TypeEnvironment;

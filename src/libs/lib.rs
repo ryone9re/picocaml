@@ -1,5 +1,4 @@
 mod adapter;
-pub mod ast;
-pub mod eval;
+pub mod execution;
 pub mod structure;
-pub mod value;
+pub mod syntax;

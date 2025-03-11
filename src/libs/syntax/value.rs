@@ -2,8 +2,8 @@ use std::fmt::Display;
 
 use crate::{
     adapter::{RBool, RInteger, Symbol},
-    ast::Expression,
     structure::Structure,
+    syntax::ast::Expression,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

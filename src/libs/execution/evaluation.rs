@@ -5,9 +5,8 @@ use thiserror::Error;
 
 use crate::{
     adapter::{RBool, RInteger, Symbol},
-    ast::Expression,
     structure::Structure,
-    value::Value,
+    syntax::{ast::Expression, value::Value},
 };
 
 #[derive(Debug, Error)]
