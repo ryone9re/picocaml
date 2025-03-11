@@ -42,7 +42,7 @@
   - b = 基底型, t ∈ Typesとする
 
 ```bnf
-τ ::= b | t | t -> t | t list
+τ ::= b | t | t -> t
 ```
 
 - データ構造はすべてCons Listや！それ以外ありまへん
