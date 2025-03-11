@@ -36,6 +36,18 @@
 <nil> ::= "[]"
 ```
 
+### 型
+
+- 型は以下のBNFによって示される
+  - b = 基底型, t ∈ Typesとする
+
+```bnf
+τ ::= b | t | t -> t | t list
+```
+
+- データ構造はすべてCons Listや！それ以外ありまへん
+  - `getName = car cons`, `getAddress car (cdr cons)` で取れるはずや
+
 ### 構造
 
 環境、型環境の組を構造とする
@@ -45,13 +57,7 @@
 - 型環境
   - `<変数名> : 型` という感じで持つ
   - 環境で持ってるものと現在の文脈にある型情報を持つ
-    - `enum t | t -> t | t list` t ∈ Types
   - 型スキーマで使用されている多相型の一覧とそれの対応付けも持つ
-
-### データ型
-
-- データ構造はすべてCons Listや！それ以外ありまへん
-  - `getName = car cons`, `getAddress car (cdr cons)` で取れるはずや
 
 ## REPL仕様
 
