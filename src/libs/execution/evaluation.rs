@@ -1,10 +1,10 @@
-use std::ops::{Add, Mul, Sub};
-
 use anyhow::{Result, anyhow, bail};
 use thiserror::Error;
 
 use crate::{
-    adapter::{RBool, RInteger, Symbol},
+    adapter::{
+        RArithmeticOp, RBool, RComparisonOp, RInteger, Symbol, r_lt, r_minus, r_plus, r_times,
+    },
     structure::Structure,
     syntax::{ast::Expression, value::Value},
 };
@@ -24,10 +24,10 @@ pub fn eval(structure: Structure, expression: Expression) -> Result<(Structure, 
         Expression::Integer(n) => eval_integer(structure, n)?,
         Expression::Bool(b) => eval_bool(structure, b)?,
         Expression::Variable(variable) => eval_variable(structure, variable)?,
-        Expression::Plus { e1, e2 } => eval_plus(structure, *e1, *e2)?,
-        Expression::Minus { e1, e2 } => eval_minus(structure, *e1, *e2)?,
-        Expression::Times { e1, e2 } => eval_times(structure, *e1, *e2)?,
-        Expression::LessThan { e1, e2 } => eval_lt(structure, *e1, *e2)?,
+        Expression::Plus { e1, e2 } => eval_arithmetic_op(structure, *e1, *e2, r_plus)?,
+        Expression::Minus { e1, e2 } => eval_arithmetic_op(structure, *e1, *e2, r_minus)?,
+        Expression::Times { e1, e2 } => eval_arithmetic_op(structure, *e1, *e2, r_times)?,
+        Expression::LessThan { e1, e2 } => eval_comparison_op(structure, *e1, *e2, r_lt)?,
         Expression::If {
             predicate,
             consequent,
@@ -73,45 +73,33 @@ fn eval_variable(structure: Structure, variable: Symbol) -> Result<(Structure, V
     Ok((structure, value))
 }
 
-fn eval_plus(structure: Structure, e1: Expression, e2: Expression) -> Result<(Structure, Value)> {
+fn eval_arithmetic_op(
+    structure: Structure,
+    e1: Expression,
+    e2: Expression,
+    op: RArithmeticOp,
+) -> Result<(Structure, Value)> {
     let (_, e1) = eval(structure.clone(), e1)?;
     let (_, e2) = eval(structure.clone(), e2)?;
 
     if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (e1, e2) {
-        return Ok((structure, Value::Integer(e1_value.add(e2_value))));
+        return Ok((structure, Value::Integer(op(e1_value, e2_value))));
     }
 
     bail!(EvalError::InvalidExpression)
 }
 
-fn eval_minus(structure: Structure, e1: Expression, e2: Expression) -> Result<(Structure, Value)> {
+fn eval_comparison_op(
+    structure: Structure,
+    e1: Expression,
+    e2: Expression,
+    op: RComparisonOp,
+) -> Result<(Structure, Value)> {
     let (_, e1) = eval(structure.clone(), e1)?;
     let (_, e2) = eval(structure.clone(), e2)?;
 
     if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (e1, e2) {
-        return Ok((structure, Value::Integer(e1_value.sub(e2_value))));
-    }
-
-    bail!(EvalError::InvalidExpression)
-}
-
-fn eval_times(structure: Structure, e1: Expression, e2: Expression) -> Result<(Structure, Value)> {
-    let (_, e1) = eval(structure.clone(), e1)?;
-    let (_, e2) = eval(structure.clone(), e2)?;
-
-    if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (e1, e2) {
-        return Ok((structure, Value::Integer(e1_value.mul(e2_value))));
-    }
-
-    bail!(EvalError::InvalidExpression)
-}
-
-fn eval_lt(structure: Structure, e1: Expression, e2: Expression) -> Result<(Structure, Value)> {
-    let (_, e1) = eval(structure.clone(), e1)?;
-    let (_, e2) = eval(structure.clone(), e2)?;
-
-    if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (e1, e2) {
-        return Ok((structure, Value::Bool(e1_value.lt(&e2_value))));
+        return Ok((structure, Value::Bool(op(e1_value, e2_value))));
     }
 
     bail!(EvalError::InvalidExpression)
