@@ -9,6 +9,6 @@ enum UnificationError {
     Impossible(Expression),
 }
 
-pub fn unify(type_environments: Vec<TypeEnvironment>) -> Result<TypeEnvironment> {
-    Ok(TypeEnvironment::default())
+pub fn unify(type_environment: TypeEnvironment) -> Result<TypeEnvironment> {
+    Ok(type_environment)
 }
