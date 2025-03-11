@@ -1,11 +1,10 @@
-use std::collections::HashMap;
+mod environment;
+mod type_environment;
 
 use crate::{adapter::Symbol, value::Value};
 use anyhow::Result;
-
-type Environment = HashMap<Symbol, Value>;
-
-type TypeEnvironment = HashMap<Symbol, ()>;
+use environment::Environment;
+use type_environment::TypeEnvironment;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Structure {
