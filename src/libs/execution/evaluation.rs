@@ -15,8 +15,6 @@ enum EvalError {
     InvalidExpression,
     #[error("Undefined variable: {0}")]
     UndefinedVariable(Symbol),
-    #[error("Type error!")]
-    TypeError,
 }
 
 pub fn eval(environment: Environment, expression: Expression) -> Result<(Environment, Value)> {
@@ -116,7 +114,7 @@ fn eval_if(
     match predicate {
         Value::Bool(b) if b => eval(environment, consequent),
         Value::Bool(b) if !b => eval(environment, alternative),
-        _ => bail!(EvalError::TypeError),
+        _ => bail!(EvalError::InvalidExpression),
     }
 }
 
