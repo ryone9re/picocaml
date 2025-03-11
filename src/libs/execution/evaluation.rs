@@ -5,7 +5,7 @@ use crate::{
     adapter::{
         RArithmeticOp, RBool, RComparisonOp, RInteger, Symbol, r_lt, r_minus, r_plus, r_times,
     },
-    structure::Structure,
+    execution::environment::Environment,
     syntax::{ast::Expression, value::Value},
 };
 
@@ -19,130 +19,130 @@ enum EvalError {
     TypeError,
 }
 
-pub fn eval(structure: Structure, expression: Expression) -> Result<(Structure, Value)> {
-    let (new_structure, value) = match expression {
-        Expression::Integer(n) => eval_integer(structure, n)?,
-        Expression::Bool(b) => eval_bool(structure, b)?,
-        Expression::Variable(variable) => eval_variable(structure, variable)?,
-        Expression::Plus { e1, e2 } => eval_arithmetic_op(structure, *e1, *e2, r_plus)?,
-        Expression::Minus { e1, e2 } => eval_arithmetic_op(structure, *e1, *e2, r_minus)?,
-        Expression::Times { e1, e2 } => eval_arithmetic_op(structure, *e1, *e2, r_times)?,
-        Expression::LessThan { e1, e2 } => eval_comparison_op(structure, *e1, *e2, r_lt)?,
+pub fn eval(environment: Environment, expression: Expression) -> Result<(Environment, Value)> {
+    let (new_environment, value) = match expression {
+        Expression::Integer(n) => eval_integer(environment, n)?,
+        Expression::Bool(b) => eval_bool(environment, b)?,
+        Expression::Variable(variable) => eval_variable(environment, variable)?,
+        Expression::Plus { e1, e2 } => eval_arithmetic_op(environment, *e1, *e2, r_plus)?,
+        Expression::Minus { e1, e2 } => eval_arithmetic_op(environment, *e1, *e2, r_minus)?,
+        Expression::Times { e1, e2 } => eval_arithmetic_op(environment, *e1, *e2, r_times)?,
+        Expression::LessThan { e1, e2 } => eval_comparison_op(environment, *e1, *e2, r_lt)?,
         Expression::If {
             predicate,
             consequent,
             alternative,
-        } => eval_if(structure, *predicate, *consequent, *alternative)?,
+        } => eval_if(environment, *predicate, *consequent, *alternative)?,
         Expression::Let {
             variable,
             bound,
             body,
-        } => eval_let(structure, variable, *bound, *body)?,
-        Expression::Fun { parameter, body } => eval_fun(structure, parameter, *body)?,
-        Expression::App { function, argument } => eval_app(structure, *function, *argument)?,
+        } => eval_let(environment, variable, *bound, *body)?,
+        Expression::Fun { parameter, body } => eval_fun(environment, parameter, *body)?,
+        Expression::App { function, argument } => eval_app(environment, *function, *argument)?,
         Expression::LetRec {
             variable,
             bound_function,
             body,
-        } => eval_let_rec(structure, variable, *bound_function, *body)?,
-        Expression::Nil => eval_nil(structure)?,
-        Expression::Cons { car, cdr } => eval_cons(structure, *car, *cdr)?,
+        } => eval_let_rec(environment, variable, *bound_function, *body)?,
+        Expression::Nil => eval_nil(environment)?,
+        Expression::Cons { car, cdr } => eval_cons(environment, *car, *cdr)?,
         Expression::Match {
             scrutinee,
             nil_case,
             cons_pattern: (car, cdr, cons_case),
-        } => eval_match(structure, *scrutinee, *nil_case, (car, cdr, *cons_case))?,
+        } => eval_match(environment, *scrutinee, *nil_case, (car, cdr, *cons_case))?,
     };
 
-    Ok((new_structure, value))
+    Ok((new_environment, value))
 }
 
-fn eval_integer(structure: Structure, n: RInteger) -> Result<(Structure, Value)> {
-    Ok((structure, Value::Integer(n)))
+fn eval_integer(environment: Environment, n: RInteger) -> Result<(Environment, Value)> {
+    Ok((environment, Value::Integer(n)))
 }
 
-fn eval_bool(structure: Structure, b: RBool) -> Result<(Structure, Value)> {
-    Ok((structure, Value::Bool(b)))
+fn eval_bool(environment: Environment, b: RBool) -> Result<(Environment, Value)> {
+    Ok((environment, Value::Bool(b)))
 }
 
-fn eval_variable(structure: Structure, variable: Symbol) -> Result<(Structure, Value)> {
-    let value = structure
-        .get_variable_value(&variable)
+fn eval_variable(environment: Environment, variable: Symbol) -> Result<(Environment, Value)> {
+    let value = environment
+        .get(&variable)
         .ok_or(anyhow!(EvalError::UndefinedVariable(variable.clone())))?;
 
-    Ok((structure, value))
+    Ok((environment, value))
 }
 
 fn eval_arithmetic_op(
-    structure: Structure,
+    environment: Environment,
     e1: Expression,
     e2: Expression,
     op: RArithmeticOp,
-) -> Result<(Structure, Value)> {
-    let (_, e1) = eval(structure.clone(), e1)?;
-    let (_, e2) = eval(structure.clone(), e2)?;
+) -> Result<(Environment, Value)> {
+    let (_, e1) = eval(environment.clone(), e1)?;
+    let (_, e2) = eval(environment.clone(), e2)?;
 
     if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (e1, e2) {
-        return Ok((structure, Value::Integer(op(e1_value, e2_value))));
+        return Ok((environment, Value::Integer(op(e1_value, e2_value))));
     }
 
     bail!(EvalError::InvalidExpression)
 }
 
 fn eval_comparison_op(
-    structure: Structure,
+    environment: Environment,
     e1: Expression,
     e2: Expression,
     op: RComparisonOp,
-) -> Result<(Structure, Value)> {
-    let (_, e1) = eval(structure.clone(), e1)?;
-    let (_, e2) = eval(structure.clone(), e2)?;
+) -> Result<(Environment, Value)> {
+    let (_, e1) = eval(environment.clone(), e1)?;
+    let (_, e2) = eval(environment.clone(), e2)?;
 
     if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (e1, e2) {
-        return Ok((structure, Value::Bool(op(e1_value, e2_value))));
+        return Ok((environment, Value::Bool(op(e1_value, e2_value))));
     }
 
     bail!(EvalError::InvalidExpression)
 }
 
 fn eval_if(
-    structure: Structure,
+    environment: Environment,
     predicate: Expression,
     consequent: Expression,
     alternative: Expression,
-) -> Result<(Structure, Value)> {
-    let (_, predicate) = eval(structure.clone(), predicate)?;
+) -> Result<(Environment, Value)> {
+    let (_, predicate) = eval(environment.clone(), predicate)?;
 
     match predicate {
-        Value::Bool(b) if b => eval(structure, consequent),
-        Value::Bool(b) if !b => eval(structure, alternative),
+        Value::Bool(b) if b => eval(environment, consequent),
+        Value::Bool(b) if !b => eval(environment, alternative),
         _ => bail!(EvalError::TypeError),
     }
 }
 
 fn eval_let(
-    structure: Structure,
+    environment: Environment,
     variable: Symbol,
     bound: Expression,
     body: Expression,
-) -> Result<(Structure, Value)> {
-    let (_, bound) = eval(structure.clone(), bound)?;
-    let new_structure = structure.bind_variable(variable, bound)?;
+) -> Result<(Environment, Value)> {
+    let (_, bound) = eval(environment.clone(), bound)?;
+    let new_environment = environment.bind(variable, bound)?;
 
-    eval(new_structure, body)
+    eval(new_environment, body)
 }
 
 fn eval_fun(
-    structure: Structure,
+    environment: Environment,
     parameter: Symbol,
     body: Expression,
-) -> Result<(Structure, Value)> {
-    let captured_structure = structure.clone();
+) -> Result<(Environment, Value)> {
+    let captured_environment = environment.clone();
 
     Ok((
-        structure,
+        environment,
         Value::Closure {
-            structure: captured_structure,
+            environment: captured_environment,
             parameter,
             body,
         },
@@ -150,83 +150,87 @@ fn eval_fun(
 }
 
 fn eval_app(
-    structure: Structure,
+    environment: Environment,
     function: Expression,
     argument: Expression,
-) -> Result<(Structure, Value)> {
-    let (_, closure) = eval(structure.clone(), function)?;
-    let (_, argument) = eval(structure.clone(), argument)?;
+) -> Result<(Environment, Value)> {
+    let (_, closure) = eval(environment.clone(), function)?;
+    let (_, argument) = eval(environment.clone(), argument)?;
 
     match closure {
         Value::Closure {
-            structure,
+            environment,
             parameter,
             body,
         } => {
-            let captured_structure = structure.bind_variable(parameter, argument)?;
+            let captured_environment = environment.bind(parameter, argument)?;
 
-            eval(captured_structure, body)
+            eval(captured_environment, body)
         }
         Value::RecClosure {
-            structure,
+            environment,
             call_name,
             parameter,
             body,
         } => {
             let rec_closure = Value::RecClosure {
-                structure: structure.clone(),
+                environment: environment.clone(),
                 call_name: call_name.clone(),
                 parameter: parameter.clone(),
                 body: body.clone(),
             };
-            let structure = structure.bind_variable(call_name, rec_closure)?;
-            let captured_structure = structure.bind_variable(parameter, argument)?;
+            let environment = environment.bind(call_name, rec_closure)?;
+            let captured_environment = environment.bind(parameter, argument)?;
 
-            eval(captured_structure, body)
+            eval(captured_environment, body)
         }
         _ => bail!(EvalError::InvalidExpression),
     }
 }
 
 fn eval_let_rec(
-    structure: Structure,
+    environment: Environment,
     variable: Symbol,
     bound_function: Expression,
     body: Expression,
-) -> Result<(Structure, Value)> {
+) -> Result<(Environment, Value)> {
     if let Expression::Fun {
         parameter,
         body: function_body,
     } = bound_function
     {
-        let captured_structure = structure.clone();
+        let captured_environment = environment.clone();
         let call_name = variable.clone();
-        let structure = structure.bind_variable(
+        let environment = environment.bind(
             variable,
             Value::RecClosure {
-                structure: captured_structure,
+                environment: captured_environment,
                 call_name,
                 parameter,
                 body: *function_body,
             },
         )?;
 
-        return eval(structure, body);
+        return eval(environment, body);
     }
 
-    eval(structure, body)
+    eval(environment, body)
 }
 
-fn eval_nil(structure: Structure) -> Result<(Structure, Value)> {
-    Ok((structure, Value::Nil))
+fn eval_nil(environment: Environment) -> Result<(Environment, Value)> {
+    Ok((environment, Value::Nil))
 }
 
-fn eval_cons(structure: Structure, car: Expression, cdr: Expression) -> Result<(Structure, Value)> {
-    let (_, car) = eval(structure.clone(), car)?;
-    let (_, cdr) = eval(structure.clone(), cdr)?;
+fn eval_cons(
+    environment: Environment,
+    car: Expression,
+    cdr: Expression,
+) -> Result<(Environment, Value)> {
+    let (_, car) = eval(environment.clone(), car)?;
+    let (_, cdr) = eval(environment.clone(), cdr)?;
 
     Ok((
-        structure,
+        environment,
         Value::Cons {
             car: car.into(),
             cdr: cdr.into(),
@@ -235,22 +239,22 @@ fn eval_cons(structure: Structure, car: Expression, cdr: Expression) -> Result<(
 }
 
 fn eval_match(
-    structure: Structure,
+    environment: Environment,
     scrutinee: Expression,
     nil_case: Expression,
     cons_pattern: (Symbol, Symbol, Expression),
-) -> Result<(Structure, Value)> {
-    let (_, pattern) = eval(structure.clone(), scrutinee)?;
+) -> Result<(Environment, Value)> {
+    let (_, pattern) = eval(environment.clone(), scrutinee)?;
 
     match pattern {
-        Value::Nil => eval(structure, nil_case),
+        Value::Nil => eval(environment, nil_case),
         Value::Cons { car, cdr } => {
             let (car_variable, cdr_variable, cons_case) = cons_pattern;
-            let structure = structure
-                .bind_variable(car_variable, *car)?
-                .bind_variable(cdr_variable, *cdr)?;
+            let environment = environment
+                .bind(car_variable, *car)?
+                .bind(cdr_variable, *cdr)?;
 
-            eval(structure, cons_case)
+            eval(environment, cons_case)
         }
         _ => bail!(EvalError::InvalidExpression),
     }
@@ -272,7 +276,7 @@ mod tests {
             .into(),
         };
 
-        let result = eval(Structure::default(), expr);
+        let result = eval(Environment::default(), expr);
 
         assert!(result.is_ok());
         let value = result.unwrap().1;
@@ -292,7 +296,7 @@ mod tests {
             .into(),
         };
 
-        let result = eval(Structure::default(), expr);
+        let result = eval(Environment::default(), expr);
 
         assert!(result.is_ok());
         let value = result.unwrap().1;
@@ -312,7 +316,7 @@ mod tests {
             alternative: Expression::Integer(30).into(),
         };
 
-        let result = eval(Structure::default(), expr);
+        let result = eval(Environment::default(), expr);
 
         assert!(result.is_ok());
         let value = result.unwrap().1;
@@ -335,7 +339,7 @@ mod tests {
             argument: Expression::Integer(5).into(),
         };
 
-        let result = eval(Structure::default(), expr);
+        let result = eval(Environment::default(), expr);
 
         assert!(result.is_ok());
         let value = result.unwrap().1;
@@ -380,7 +384,7 @@ mod tests {
             .into(),
         };
 
-        let result = eval(Structure::default(), expr);
+        let result = eval(Environment::default(), expr);
 
         assert!(result.is_ok());
         let value = result.unwrap().1;
@@ -408,7 +412,7 @@ mod tests {
             ),
         };
 
-        let result = eval(Structure::default(), expr);
+        let result = eval(Environment::default(), expr);
 
         assert!(result.is_ok());
         let value = result.unwrap().1;

@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::{
     adapter::{RBool, RInteger, Symbol},
-    structure::Structure,
+    execution::environment::Environment,
     syntax::ast::Expression,
 };
 
@@ -11,12 +11,12 @@ pub enum Value {
     Integer(RInteger),
     Bool(RBool),
     Closure {
-        structure: Structure,
+        environment: Environment,
         parameter: Symbol,
         body: Expression,
     },
     RecClosure {
-        structure: Structure,
+        environment: Environment,
         call_name: Symbol,
         parameter: Symbol,
         body: Expression,
