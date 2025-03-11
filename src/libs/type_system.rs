@@ -1,10 +1,10 @@
+pub mod type_environment;
+
 use anyhow::Result;
 use thiserror::Error;
 use type_environment::TypeEnvironment;
 
 use crate::syntax::ast::Expression;
-
-pub mod type_environment;
 
 #[derive(Debug, Error)]
 enum TypeInferenceError {

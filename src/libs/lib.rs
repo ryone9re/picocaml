@@ -1,4 +1,4 @@
 mod adapter;
 pub mod execution;
 pub mod syntax;
-pub mod type_inference;
+pub mod type_system;
