@@ -1,12 +1,10 @@
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
 use crate::{
+    adapter::{RBool, RInteger, Symbol},
     ast::Expression,
-    eval::Structure,
-    types::{RBool, RInteger, Symbol},
+    structure::Structure,
 };
-
-pub type Environment = HashMap<Symbol, Value>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Value {

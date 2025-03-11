@@ -4,9 +4,10 @@ use anyhow::{Result, anyhow, bail};
 use thiserror::Error;
 
 use crate::{
+    adapter::{RBool, RInteger, Symbol},
     ast::Expression,
-    types::{RBool, RInteger, Symbol, TypeEnvironment},
-    value::{Environment, Value},
+    structure::Structure,
+    value::Value,
 };
 
 #[derive(Debug, Error)]
@@ -17,20 +18,6 @@ enum EvalError {
     UndefinedVariable(Symbol),
     #[error("Type error!")]
     TypeError,
-}
-
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-pub struct Structure {
-    environment: Environment,
-    type_environment: TypeEnvironment,
-}
-
-impl Structure {
-    fn assign_variable(self, variable: Symbol, value: Value) -> Result<Structure> {
-        let mut new_structure = self.clone();
-        new_structure.environment.insert(variable, value);
-        Ok(new_structure)
-    }
 }
 
 pub fn eval(structure: Structure, expression: Expression) -> Result<(Structure, Value)> {
@@ -81,10 +68,8 @@ fn eval_bool(structure: Structure, b: RBool) -> Result<(Structure, Value)> {
 
 fn eval_variable(structure: Structure, variable: Symbol) -> Result<(Structure, Value)> {
     let value = structure
-        .environment
-        .get(&variable)
-        .ok_or(anyhow!(EvalError::UndefinedVariable(variable.clone())))?
-        .clone();
+        .get_variable_value(&variable)
+        .ok_or(anyhow!(EvalError::UndefinedVariable(variable.clone())))?;
 
     Ok((structure, value))
 }
