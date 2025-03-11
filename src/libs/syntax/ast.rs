@@ -41,7 +41,7 @@ pub enum Expression {
     },
     LetRec {
         variable: Symbol,
-        bound_function: Box<Expression>,
+        bound_function: Box<Expression>, // Expression = Expression::Funであることを暗黙的に前提とする
         body: Box<Expression>,
     },
     Nil,
