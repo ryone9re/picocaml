@@ -18,41 +18,39 @@ enum EvalError {
 }
 
 pub fn eval(environment: Environment, expression: Expression) -> Result<(Environment, Value)> {
-    let (new_environment, value) = match expression {
-        Expression::Integer(n) => eval_integer(environment, n)?,
-        Expression::Bool(b) => eval_bool(environment, b)?,
-        Expression::Variable(variable) => eval_variable(environment, variable)?,
-        Expression::Plus { e1, e2 } => eval_arithmetic_op(environment, *e1, *e2, r_plus)?,
-        Expression::Minus { e1, e2 } => eval_arithmetic_op(environment, *e1, *e2, r_minus)?,
-        Expression::Times { e1, e2 } => eval_arithmetic_op(environment, *e1, *e2, r_times)?,
-        Expression::LessThan { e1, e2 } => eval_comparison_op(environment, *e1, *e2, r_lt)?,
+    match expression {
+        Expression::Integer(n) => eval_integer(environment, n),
+        Expression::Bool(b) => eval_bool(environment, b),
+        Expression::Variable(variable) => eval_variable(environment, variable),
+        Expression::Plus { e1, e2 } => eval_arithmetic_op(environment, *e1, *e2, r_plus),
+        Expression::Minus { e1, e2 } => eval_arithmetic_op(environment, *e1, *e2, r_minus),
+        Expression::Times { e1, e2 } => eval_arithmetic_op(environment, *e1, *e2, r_times),
+        Expression::LessThan { e1, e2 } => eval_comparison_op(environment, *e1, *e2, r_lt),
         Expression::If {
             predicate,
             consequent,
             alternative,
-        } => eval_if(environment, *predicate, *consequent, *alternative)?,
+        } => eval_if(environment, *predicate, *consequent, *alternative),
         Expression::Let {
             variable,
             bound,
             body,
-        } => eval_let(environment, variable, *bound, *body)?,
-        Expression::Fun { parameter, body } => eval_fun(environment, parameter, *body)?,
-        Expression::App { function, argument } => eval_app(environment, *function, *argument)?,
+        } => eval_let(environment, variable, *bound, *body),
+        Expression::Fun { parameter, body } => eval_fun(environment, parameter, *body),
+        Expression::App { function, argument } => eval_app(environment, *function, *argument),
         Expression::LetRec {
             variable,
             bound_function,
             body,
-        } => eval_let_rec(environment, variable, *bound_function, *body)?,
-        Expression::Nil => eval_nil(environment)?,
-        Expression::Cons { car, cdr } => eval_cons(environment, *car, *cdr)?,
+        } => eval_let_rec(environment, variable, *bound_function, *body),
+        Expression::Nil => eval_nil(environment),
+        Expression::Cons { car, cdr } => eval_cons(environment, *car, *cdr),
         Expression::Match {
             scrutinee,
             nil_case,
             cons_pattern: (car, cdr, cons_case),
-        } => eval_match(environment, *scrutinee, *nil_case, (car, cdr, *cons_case))?,
-    };
-
-    Ok((new_environment, value))
+        } => eval_match(environment, *scrutinee, *nil_case, (car, cdr, *cons_case)),
+    }
 }
 
 fn eval_integer(environment: Environment, n: RInteger) -> Result<(Environment, Value)> {
