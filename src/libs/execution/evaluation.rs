@@ -3,7 +3,8 @@ use thiserror::Error;
 
 use crate::{
     adapter::{
-        RArithmeticOp, RBool, RComparisonOp, RInteger, Symbol, r_lt, r_minus, r_plus, r_times,
+        RArithmeticOperation, RBool, RComparisonOperation, RInteger, Symbol, r_lt, r_minus, r_plus,
+        r_times,
     },
     execution::environment::Environment,
     syntax::{ast::Expression, value::Value},
@@ -85,7 +86,7 @@ fn eval_arithmetic_operation(
     environment: Environment,
     expression1: Expression,
     expression2: Expression,
-    operation: RArithmeticOp,
+    operation: RArithmeticOperation,
 ) -> Result<(Environment, Value)> {
     let (_, expression1) = eval(environment.clone(), expression1)?;
     let (_, expression2) = eval(environment.clone(), expression2)?;
@@ -103,7 +104,7 @@ fn eval_comparison_operation(
     environment: Environment,
     expression1: Expression,
     expression2: Expression,
-    operation: RComparisonOp,
+    operation: RComparisonOperation,
 ) -> Result<(Environment, Value)> {
     let (_, expression1) = eval(environment.clone(), expression1)?;
     let (_, expression2) = eval(environment.clone(), expression2)?;
