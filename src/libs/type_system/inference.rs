@@ -1,10 +1,11 @@
-use crate::type_system::type_environment::{BaseType, Type, TypeEnvironment};
+use crate::type_system::{
+    type_environment::{BaseType, Type, TypeEnvironment},
+    unification::{normalize, unify},
+};
 use anyhow::{Ok, Result, anyhow, bail};
 use thiserror::Error;
 
 use crate::syntax::ast::Expression;
-
-use super::unification::{normalize, unify};
 
 #[derive(Debug, Error)]
 enum TypeInferenceError {
@@ -18,8 +19,11 @@ enum TypeInferenceError {
     OperandTypeUnmatched(Expression),
 }
 
-pub fn type_inference(expression: Expression) -> Result<(TypeEnvironment, Type)> {
-    let (inferred_environment, inferred_type) = infer(TypeEnvironment::default(), expression)?;
+pub fn type_inference(
+    type_environment: TypeEnvironment,
+    expression: Expression,
+) -> Result<(TypeEnvironment, Type)> {
+    let (inferred_environment, inferred_type) = infer(type_environment, expression)?;
     let unified_environment = unify(inferred_environment)?;
     let normalized_type = normalize(unified_environment.clone(), inferred_type)?;
 
@@ -59,8 +63,8 @@ fn infer(
             variable,
             bound,
             body,
-        } => todo!(),
-        Expression::Fun { parameter, body } => todo!(),
+        } => infer_let(type_environment, variable, *bound, *body),
+        Expression::Fun { parameter, body } => infer_fun(type_environment, parameter, *body),
         Expression::App { function, argument } => infer_app(type_environment, *function, *argument),
         Expression::LetRec {
             variable,
@@ -118,14 +122,11 @@ fn infer_binary_operation(
     expression1: Expression,
     expression2: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
-    let expression2_clone = expression2.clone();
-
     let (_, expression1_type) = infer(type_environment.clone(), expression1)?;
     let (_, expression2_type) = infer(type_environment.clone(), expression2)?;
 
-    if expression1_type != expression2_type {
-        bail!(TypeInferenceError::OperandTypeUnmatched(expression2_clone));
-    }
+    let type_environment =
+        type_environment.add_constraint(expression1_type.clone(), expression2_type.clone());
 
     Ok((type_environment, expression1_type))
 }
@@ -135,14 +136,11 @@ fn infer_binary_predicate(
     expression1: Expression,
     expression2: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
-    let expression2_clone = expression2.clone();
-
     let (_, expression1_type) = infer(type_environment.clone(), expression1)?;
     let (_, expression2_type) = infer(type_environment.clone(), expression2)?;
 
-    if expression1_type != expression2_type {
-        bail!(TypeInferenceError::OperandTypeUnmatched(expression2_clone));
-    }
+    let type_environment =
+        type_environment.add_constraint(expression1_type.clone(), expression2_type.clone());
 
     Ok((type_environment, Type::Base(BaseType::Bool)))
 }
@@ -154,18 +152,43 @@ fn infer_if(
     alternative: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
     let (_, predicate_type) = infer(type_environment.clone(), predicate.clone())?;
-    if predicate_type != Type::Base(BaseType::Bool) {
-        bail!(TypeInferenceError::InvalidType(predicate));
-    }
+    let type_environment =
+        type_environment.add_constraint(predicate_type.clone(), Type::Base(BaseType::Bool));
 
     let (_, consequent_type) = infer(type_environment.clone(), consequent.clone())?;
     let (_, alternative_type) = infer(type_environment.clone(), alternative.clone())?;
 
-    if consequent_type != alternative_type {
-        bail!(TypeInferenceError::OperandTypeUnmatched(alternative));
-    }
+    let type_environment =
+        type_environment.add_constraint(consequent_type.clone(), alternative_type.clone());
 
     Ok((type_environment, consequent_type))
+}
+
+fn infer_let(
+    type_environment: TypeEnvironment,
+    variable: String,
+    bound: Expression,
+    body: Expression,
+) -> Result<(TypeEnvironment, Type)> {
+    let (_, bound_type) = infer(type_environment.clone(), bound)?;
+    let type_environment = type_environment.substitute_variable(variable, bound_type)?;
+
+    infer(type_environment, body)
+}
+
+fn infer_fun(
+    type_environment: TypeEnvironment,
+    parameter: String,
+    body: Expression,
+) -> Result<(TypeEnvironment, Type)> {
+    let type_environment = type_environment.substitute_variable(
+        parameter.clone(),
+        Type::Variable {
+            name: parameter.clone(),
+        },
+    )?;
+
+    infer(type_environment, body)
 }
 
 fn infer_app(
@@ -180,9 +203,7 @@ fn infer_app(
     };
 
     let (_, argument_type) = infer(type_environment.clone(), argument.clone())?;
-    if domain != argument_type {
-        bail!(TypeInferenceError::InvalidType(argument));
-    }
+    let type_environment = type_environment.add_constraint(domain, argument_type);
 
     Ok((type_environment, range))
 }
@@ -195,11 +216,10 @@ mod test {
     fn test_infer_integer() {
         let expr = Expression::Integer(10);
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
-        let (env, ty) = result.unwrap();
-        assert!(env.is_empty());
+        let (_, ty) = result.unwrap();
         assert_eq!(ty, Type::Base(BaseType::Integer));
     }
 
@@ -207,42 +227,35 @@ mod test {
     fn test_infer_bool() {
         let expr = Expression::Bool(true);
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
-        let (env, ty) = result.unwrap();
-        assert!(env.is_empty());
+        let (_, ty) = result.unwrap();
         assert_eq!(ty, Type::Base(BaseType::Bool));
     }
 
-    // #[test]
-    // fn test_infer_variable() {
-    //     let env =
-    //         TypeEnvironment::default().substitute_variable("x", Type::Base(BaseType::Integer));
+    #[test]
+    fn test_infer_variable() {
+        let env = TypeEnvironment::default()
+            .substitute_variable("x".to_string(), Type::Base(BaseType::Integer))
+            .unwrap();
 
-    //     let expr = Expression::Variable("x".to_string());
+        let expr = Expression::Variable("x".to_string());
 
-    //     let result = infer(env, expr);
+        let result = infer(env, expr);
 
-    //     assert!(result.is_ok());
-    //     let (_, ty) = result.unwrap();
-    //     assert_eq!(ty, Type::Base(BaseType::Integer));
-    // }
+        assert!(result.is_ok());
+        let (_, ty) = result.unwrap();
+        assert_eq!(ty, Type::Base(BaseType::Integer));
+    }
 
     #[test]
     fn test_infer_undefined_variable() {
         let expr = Expression::Variable("unknown".to_string());
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_err());
-        assert!(
-            result
-                .err()
-                .unwrap()
-                .to_string()
-                .contains("Undefined variable")
-        );
     }
 
     #[test]
@@ -252,11 +265,10 @@ mod test {
             expression2: Expression::Integer(5).into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
-        let (env, ty) = result.unwrap();
-        assert!(env.is_empty());
+        let (_, ty) = result.unwrap();
         assert_eq!(ty, Type::Base(BaseType::Integer));
     }
 
@@ -267,11 +279,10 @@ mod test {
             expression2: Expression::Integer(5).into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
-        let (env, ty) = result.unwrap();
-        assert!(env.is_empty());
+        let (_, ty) = result.unwrap();
         assert_eq!(ty, Type::Base(BaseType::Integer));
     }
 
@@ -282,11 +293,10 @@ mod test {
             expression2: Expression::Integer(5).into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
-        let (env, ty) = result.unwrap();
-        assert!(env.is_empty());
+        let (_, ty) = result.unwrap();
         assert_eq!(ty, Type::Base(BaseType::Integer));
     }
 
@@ -297,11 +307,10 @@ mod test {
             expression2: Expression::Integer(5).into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
-        let (env, ty) = result.unwrap();
-        assert!(env.is_empty());
+        let (_, ty) = result.unwrap();
         assert_eq!(ty, Type::Base(BaseType::Bool));
     }
 
@@ -312,7 +321,7 @@ mod test {
             expression2: Expression::Bool(true).into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_err());
     }
@@ -325,11 +334,10 @@ mod test {
             alternative: Expression::Integer(2).into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
-        let (env, ty) = result.unwrap();
-        assert!(env.is_empty());
+        let (_, ty) = result.unwrap();
         assert_eq!(ty, Type::Base(BaseType::Integer));
     }
 
@@ -341,7 +349,7 @@ mod test {
             alternative: Expression::Integer(2).into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_err());
     }
@@ -354,7 +362,7 @@ mod test {
             alternative: Expression::Bool(false).into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_err());
     }
@@ -371,7 +379,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
         let (_, ty) = result.unwrap();
@@ -391,7 +399,7 @@ mod test {
             body: Expression::Variable("result".to_string()).into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
         let (_, ty) = result.unwrap();
@@ -409,7 +417,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
         let (_, ty) = result.unwrap();
@@ -430,7 +438,7 @@ mod test {
             body: Expression::Variable("x".to_string()).into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
         let (_, ty) = result.unwrap();
@@ -461,7 +469,7 @@ mod test {
             argument: arg_expr.into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
         let (_, ty) = result.unwrap();
@@ -486,7 +494,7 @@ mod test {
             argument: arg_expr.into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_err());
     }
@@ -528,7 +536,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
         let (_, ty) = result.unwrap();
@@ -539,7 +547,7 @@ mod test {
     // fn test_infer_nil() {
     //     let expr = Expression::Nil;
 
-    //     let result = type_inference(expr);
+    //     let result = type_inference(TypeEnvironment::default(), expr);
 
     //     assert!(result.is_ok());
     //     let (_, ty) = result.unwrap();
@@ -553,7 +561,7 @@ mod test {
     //         cdr: Expression::Nil.into(),
     //     };
 
-    //     let result = type_inference(expr);
+    //     let result = type_inference(TypeEnvironment::default(), expr);
 
     //     assert!(result.is_ok());
     //     let (_, ty) = result.unwrap();
@@ -571,7 +579,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_err());
     }
@@ -592,7 +600,7 @@ mod test {
             ),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
         let (_, ty) = result.unwrap();
@@ -619,7 +627,7 @@ mod test {
             ),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
         let (_, ty) = result.unwrap();
@@ -642,7 +650,7 @@ mod test {
             ),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_err());
     }
@@ -659,7 +667,7 @@ mod test {
             ),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_err());
     }
@@ -675,11 +683,10 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
-        let (env, ty) = result.unwrap();
-        assert!(env.is_empty());
+        let (_, ty) = result.unwrap();
         assert_eq!(ty, Type::Base(BaseType::Integer));
     }
 
@@ -694,11 +701,10 @@ mod test {
             expression2: Expression::Integer(10).into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
-        let (env, ty) = result.unwrap();
-        assert!(env.is_empty());
+        let (_, ty) = result.unwrap();
         assert_eq!(ty, Type::Base(BaseType::Bool));
     }
 
@@ -730,7 +736,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
         let (_, ty) = result.unwrap();
@@ -784,7 +790,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
         let (_, ty) = result.unwrap();

@@ -1,9 +1,7 @@
 use anyhow::Result;
 use thiserror::Error;
 
-use crate::type_system::type_environment::TypeEnvironment;
-
-use super::type_environment::Type;
+use crate::type_system::type_environment::{Type, TypeEnvironment};
 
 #[derive(Debug, Error)]
 enum UnificationError {
