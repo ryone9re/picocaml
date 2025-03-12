@@ -277,7 +277,7 @@ mod tests {
         let result = eval(Environment::default(), expr);
 
         assert!(result.is_ok());
-        let value = result.unwrap().1;
+        let (_, value) = result.unwrap();
         assert!(matches!(value, Value::Integer(13)));
     }
 
@@ -297,7 +297,7 @@ mod tests {
         let result = eval(Environment::default(), expr);
 
         assert!(result.is_ok());
-        let value = result.unwrap().1;
+        let (_, value) = result.unwrap();
         assert!(matches!(value, Value::Integer(15)));
     }
 
@@ -317,7 +317,7 @@ mod tests {
         let result = eval(Environment::default(), expr);
 
         assert!(result.is_ok());
-        let value = result.unwrap().1;
+        let (_, value) = result.unwrap();
         assert!(matches!(value, Value::Integer(20)));
     }
 
@@ -340,7 +340,7 @@ mod tests {
         let result = eval(Environment::default(), expr);
 
         assert!(result.is_ok());
-        let value = result.unwrap().1;
+        let (_, value) = result.unwrap();
         assert!(matches!(value, Value::Integer(6)));
     }
 
@@ -385,7 +385,7 @@ mod tests {
         let result = eval(Environment::default(), expr);
 
         assert!(result.is_ok());
-        let value = result.unwrap().1;
+        let (_, value) = result.unwrap();
         assert!(matches!(value, Value::Integer(120)));
     }
 
@@ -413,7 +413,7 @@ mod tests {
         let result = eval(Environment::default(), expr);
 
         assert!(result.is_ok());
-        let value = result.unwrap().1;
+        let (_, value) = result.unwrap();
         assert!(matches!(value, Value::Integer(1)));
     }
 }
