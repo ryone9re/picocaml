@@ -8,20 +8,20 @@ pub enum Expression {
     Bool(RBool),
     Variable(Symbol),
     Plus {
-        e1: Box<Expression>,
-        e2: Box<Expression>,
+        expression1: Box<Expression>,
+        expression2: Box<Expression>,
     },
     Minus {
-        e1: Box<Expression>,
-        e2: Box<Expression>,
+        expression1: Box<Expression>,
+        expression2: Box<Expression>,
     },
     Times {
-        e1: Box<Expression>,
-        e2: Box<Expression>,
+        expression1: Box<Expression>,
+        expression2: Box<Expression>,
     },
     LessThan {
-        e1: Box<Expression>,
-        e2: Box<Expression>,
+        expression1: Box<Expression>,
+        expression2: Box<Expression>,
     },
     If {
         predicate: Box<Expression>,

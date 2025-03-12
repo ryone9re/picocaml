@@ -3,14 +3,29 @@ use std::collections::HashMap;
 use crate::adapter::Symbol;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum BaseType {
+    Integer,
+    Bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
-    Integer, // 基底型
-    Bool,    // 基底型
+    Base(BaseType),
     Variable { name: Symbol },
     Function { domain: Box<Type>, range: Box<Type> },
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct TypeEnvironment {
-    equation: HashMap<Type, Type>, // 基底型と関数型の組はありえない
+    variable_types: HashMap<Symbol, Type>,
+}
+
+impl TypeEnvironment {
+    pub fn is_empty(&self) -> bool {
+        self.variable_types.is_empty()
+    }
+
+    pub fn get_variable_type(&self, variable_name: &Symbol) -> Option<Type> {
+        self.variable_types.get(variable_name).cloned()
+    }
 }

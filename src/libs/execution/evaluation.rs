@@ -22,10 +22,22 @@ pub fn eval(environment: Environment, expression: Expression) -> Result<(Environ
         Expression::Integer(n) => eval_integer(environment, n),
         Expression::Bool(b) => eval_bool(environment, b),
         Expression::Variable(variable) => eval_variable(environment, variable),
-        Expression::Plus { e1, e2 } => eval_arithmetic_op(environment, *e1, *e2, r_plus),
-        Expression::Minus { e1, e2 } => eval_arithmetic_op(environment, *e1, *e2, r_minus),
-        Expression::Times { e1, e2 } => eval_arithmetic_op(environment, *e1, *e2, r_times),
-        Expression::LessThan { e1, e2 } => eval_comparison_op(environment, *e1, *e2, r_lt),
+        Expression::Plus {
+            expression1,
+            expression2,
+        } => eval_arithmetic_operation(environment, *expression1, *expression2, r_plus),
+        Expression::Minus {
+            expression1,
+            expression2,
+        } => eval_arithmetic_operation(environment, *expression1, *expression2, r_minus),
+        Expression::Times {
+            expression1,
+            expression2,
+        } => eval_arithmetic_operation(environment, *expression1, *expression2, r_times),
+        Expression::LessThan {
+            expression1,
+            expression2,
+        } => eval_comparison_operation(environment, *expression1, *expression2, r_lt),
         Expression::If {
             predicate,
             consequent,
@@ -69,36 +81,40 @@ fn eval_variable(environment: Environment, variable: Symbol) -> Result<(Environm
     Ok((environment, value))
 }
 
-fn eval_arithmetic_op(
+fn eval_arithmetic_operation(
     environment: Environment,
-    e1: Expression,
-    e2: Expression,
-    op: RArithmeticOp,
+    expression1: Expression,
+    expression2: Expression,
+    operation: RArithmeticOp,
 ) -> Result<(Environment, Value)> {
-    let (_, e1) = eval(environment.clone(), e1)?;
-    let (_, e2) = eval(environment.clone(), e2)?;
+    let (_, expression1) = eval(environment.clone(), expression1)?;
+    let (_, expression2) = eval(environment.clone(), expression2)?;
 
-    if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (e1, e2) {
-        return Ok((environment, Value::Integer(op(e1_value, e2_value))));
+    match (expression1, expression2) {
+        (Value::Integer(expression1_value), Value::Integer(expression2_value)) => Ok((
+            environment,
+            Value::Integer(operation(expression1_value, expression2_value)),
+        )),
+        _ => bail!(EvalError::InvalidExpression),
     }
-
-    bail!(EvalError::InvalidExpression)
 }
 
-fn eval_comparison_op(
+fn eval_comparison_operation(
     environment: Environment,
-    e1: Expression,
-    e2: Expression,
-    op: RComparisonOp,
+    expression1: Expression,
+    expression2: Expression,
+    operation: RComparisonOp,
 ) -> Result<(Environment, Value)> {
-    let (_, e1) = eval(environment.clone(), e1)?;
-    let (_, e2) = eval(environment.clone(), e2)?;
+    let (_, expression1) = eval(environment.clone(), expression1)?;
+    let (_, expression2) = eval(environment.clone(), expression2)?;
 
-    if let (Value::Integer(e1_value), Value::Integer(e2_value)) = (e1, e2) {
-        return Ok((environment, Value::Bool(op(e1_value, e2_value))));
+    match (expression1, expression2) {
+        (Value::Integer(expression1_value), Value::Integer(expression2_value)) => Ok((
+            environment,
+            Value::Bool(operation(expression1_value, expression2_value)),
+        )),
+        _ => bail!(EvalError::InvalidExpression),
     }
-
-    bail!(EvalError::InvalidExpression)
 }
 
 fn eval_if(
@@ -264,10 +280,10 @@ mod tests {
     fn test_simple_arithmetic() {
         // 3 + 5 * 2
         let expr = Expression::Plus {
-            e1: Expression::Integer(3).into(),
-            e2: Expression::Times {
-                e1: Expression::Integer(5).into(),
-                e2: Expression::Integer(2).into(),
+            expression1: Expression::Integer(3).into(),
+            expression2: Expression::Times {
+                expression1: Expression::Integer(5).into(),
+                expression2: Expression::Integer(2).into(),
             }
             .into(),
         };
@@ -286,8 +302,8 @@ mod tests {
             variable: "x".to_string(),
             bound: Expression::Integer(10).into(),
             body: Expression::Plus {
-                e1: Expression::Variable("x".to_string()).into(),
-                e2: Expression::Integer(5).into(),
+                expression1: Expression::Variable("x".to_string()).into(),
+                expression2: Expression::Integer(5).into(),
             }
             .into(),
         };
@@ -304,8 +320,8 @@ mod tests {
         // if 5 < 10 then 20 else 30
         let expr = Expression::If {
             predicate: Expression::LessThan {
-                e1: Expression::Integer(5).into(),
-                e2: Expression::Integer(10).into(),
+                expression1: Expression::Integer(5).into(),
+                expression2: Expression::Integer(10).into(),
             }
             .into(),
             consequent: Expression::Integer(20).into(),
@@ -326,8 +342,8 @@ mod tests {
             function: Expression::Fun {
                 parameter: "x".to_string(),
                 body: Expression::Plus {
-                    e1: Expression::Variable("x".to_string()).into(),
-                    e2: Expression::Integer(1).into(),
+                    expression1: Expression::Variable("x".to_string()).into(),
+                    expression2: Expression::Integer(1).into(),
                 }
                 .into(),
             }
@@ -351,18 +367,18 @@ mod tests {
                 parameter: "n".to_string(),
                 body: Expression::If {
                     predicate: Expression::LessThan {
-                        e1: Expression::Variable("n".to_string()).into(),
-                        e2: Expression::Integer(2).into(),
+                        expression1: Expression::Variable("n".to_string()).into(),
+                        expression2: Expression::Integer(2).into(),
                     }
                     .into(),
                     consequent: Expression::Integer(1).into(),
                     alternative: Expression::Times {
-                        e1: Expression::Variable("n".to_string()).into(),
-                        e2: Expression::App {
+                        expression1: Expression::Variable("n".to_string()).into(),
+                        expression2: Expression::App {
                             function: Expression::Variable("fact".to_string()).into(),
                             argument: Expression::Minus {
-                                e1: Expression::Variable("n".to_string()).into(),
-                                e2: Expression::Integer(1).into(),
+                                expression1: Expression::Variable("n".to_string()).into(),
+                                expression2: Expression::Integer(1).into(),
                             }
                             .into(),
                         }
