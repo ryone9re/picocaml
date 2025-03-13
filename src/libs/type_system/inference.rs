@@ -439,7 +439,7 @@ mod test {
                 assert_eq!(*domain, Type::Base(BaseType::Integer));
                 assert_eq!(*range, Type::Base(BaseType::Integer));
             }
-            _ => panic!("Expected function type, got: {:?}", ty),
+            _ => panic!("Expected function type, got: {:#?}", ty),
         }
     }
 
@@ -459,7 +459,7 @@ mod test {
             Type::Function { domain, range } => {
                 assert_eq!(*domain, *range);
             }
-            _ => panic!("Expected function type, got: {:?}", ty),
+            _ => panic!("Expected function type, got: {:#?}", ty),
         }
     }
 
