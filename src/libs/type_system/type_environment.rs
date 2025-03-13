@@ -1,26 +1,25 @@
 use std::collections::{HashMap, HashSet};
 
-use anyhow::Result;
+use anyhow::{Result, anyhow, bail};
+use thiserror::Error;
 
-use crate::adapter::Symbol;
+use crate::{
+    adapter::Symbol,
+    type_system::{types::Type, unification::Equations},
+};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum BaseType {
-    Integer,
-    Bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum Type {
-    Base(BaseType),
-    Variable { name: Symbol },
-    Function { domain: Box<Type>, range: Box<Type> },
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+enum NormalizeError {
+    #[error("Cyclic type reference occur")]
+    CyclicTypeReference,
+    #[error("Unresolved type")]
+    UnresolvedType,
 }
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct TypeEnvironment {
     variable_types: HashMap<Symbol, Type>,
-    constraints: HashSet<(Type, Type)>,
+    equations: Equations,
 }
 
 impl TypeEnvironment {
@@ -34,17 +33,52 @@ impl TypeEnvironment {
 
         Ok(Self {
             variable_types,
-            constraints: self.constraints,
+            equations: self.equations,
         })
     }
 
-    pub fn add_constraint(self, type1: Type, type2: Type) -> Self {
-        let mut constraints = self.constraints.clone();
-        constraints.insert((type1, type2));
+    pub fn add_equation(self, type1: Type, type2: Type) -> Self {
+        let equations = self.equations.add(type1, type2);
 
         Self {
             variable_types: self.variable_types,
-            constraints,
+            equations,
         }
+    }
+
+    pub fn unify_equations(self) -> Result<Self> {
+        let equations = self.equations.unify()?;
+
+        Ok(Self {
+            variable_types: self.variable_types,
+            equations,
+        })
+    }
+
+    pub fn normalize_type(&self, visited: HashSet<Type>, t: Type) -> Result<Type> {
+        let normalized = match t {
+            Type::Base(base_type) => Type::Base(base_type),
+            variable @ Type::Variable { name: _ } => {
+                if visited.contains(&variable) {
+                    bail!(NormalizeError::CyclicTypeReference);
+                }
+                self.equations
+                    .get(variable)
+                    .ok_or(anyhow!(NormalizeError::UnresolvedType))?
+            }
+            Type::Function { domain, range } => {
+                let domain = self.normalize_type(visited.clone(), *domain)?;
+                let range = self.normalize_type(visited.clone(), *range)?;
+
+                Type::Function {
+                    domain: domain.into(),
+                    range: range.into(),
+                }
+            }
+        };
+
+        println!("{:?}", normalized);
+
+        Ok(normalized)
     }
 }

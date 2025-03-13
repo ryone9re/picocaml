@@ -1,6 +1,11 @@
-use crate::type_system::{
-    type_environment::{BaseType, Type, TypeEnvironment},
-    unification::{normalize, unify},
+use std::collections::HashSet;
+
+use crate::{
+    adapter::unique_simbol,
+    type_system::{
+        type_environment::TypeEnvironment,
+        types::{BaseType, Type},
+    },
 };
 use anyhow::{Ok, Result, anyhow, bail};
 use thiserror::Error;
@@ -15,8 +20,6 @@ enum TypeInferenceError {
     InvalidType(Expression),
     #[error("Undefined variable: {0}")]
     UndefinedVariable(Expression),
-    #[error("Operand type unmatched: {0}")]
-    OperandTypeUnmatched(Expression),
 }
 
 pub fn type_inference(
@@ -24,8 +27,9 @@ pub fn type_inference(
     expression: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
     let (inferred_environment, inferred_type) = infer(type_environment, expression)?;
-    let unified_environment = unify(inferred_environment)?;
-    let normalized_type = normalize(unified_environment.clone(), inferred_type)?;
+    let unified_environment = inferred_environment.unify_equations()?;
+    println!("{:?}", unified_environment);
+    let normalized_type = unified_environment.normalize_type(HashSet::new(), inferred_type)?;
 
     Ok((unified_environment, normalized_type))
 }
@@ -122,11 +126,11 @@ fn infer_binary_operation(
     expression1: Expression,
     expression2: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
-    let (_, expression1_type) = infer(type_environment.clone(), expression1)?;
-    let (_, expression2_type) = infer(type_environment.clone(), expression2)?;
+    let (type_environment, expression1_type) = infer(type_environment, expression1)?;
+    let (type_environment, expression2_type) = infer(type_environment, expression2)?;
 
     let type_environment =
-        type_environment.add_constraint(expression1_type.clone(), expression2_type.clone());
+        type_environment.add_equation(expression1_type.clone(), expression2_type.clone());
 
     Ok((type_environment, expression1_type))
 }
@@ -136,11 +140,11 @@ fn infer_binary_predicate(
     expression1: Expression,
     expression2: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
-    let (_, expression1_type) = infer(type_environment.clone(), expression1)?;
-    let (_, expression2_type) = infer(type_environment.clone(), expression2)?;
+    let (type_environment, expression1_type) = infer(type_environment, expression1)?;
+    let (type_environment, expression2_type) = infer(type_environment, expression2)?;
 
     let type_environment =
-        type_environment.add_constraint(expression1_type.clone(), expression2_type.clone());
+        type_environment.add_equation(expression1_type.clone(), expression2_type.clone());
 
     Ok((type_environment, Type::Base(BaseType::Bool)))
 }
@@ -151,15 +155,15 @@ fn infer_if(
     consequent: Expression,
     alternative: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
-    let (_, predicate_type) = infer(type_environment.clone(), predicate.clone())?;
+    let (type_environment, predicate_type) = infer(type_environment, predicate.clone())?;
     let type_environment =
-        type_environment.add_constraint(predicate_type.clone(), Type::Base(BaseType::Bool));
+        type_environment.add_equation(predicate_type.clone(), Type::Base(BaseType::Bool));
 
-    let (_, consequent_type) = infer(type_environment.clone(), consequent.clone())?;
-    let (_, alternative_type) = infer(type_environment.clone(), alternative.clone())?;
+    let (type_environment, consequent_type) = infer(type_environment, consequent.clone())?;
+    let (type_environment, alternative_type) = infer(type_environment, alternative.clone())?;
 
     let type_environment =
-        type_environment.add_constraint(consequent_type.clone(), alternative_type.clone());
+        type_environment.add_equation(consequent_type.clone(), alternative_type.clone());
 
     Ok((type_environment, consequent_type))
 }
@@ -170,7 +174,7 @@ fn infer_let(
     bound: Expression,
     body: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
-    let (_, bound_type) = infer(type_environment.clone(), bound)?;
+    let (type_environment, bound_type) = infer(type_environment, bound)?;
     let type_environment = type_environment.substitute_variable(variable, bound_type)?;
 
     infer(type_environment, body)
@@ -181,14 +185,25 @@ fn infer_fun(
     parameter: String,
     body: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
-    let type_environment = type_environment.substitute_variable(
-        parameter.clone(),
-        Type::Variable {
-            name: parameter.clone(),
-        },
-    )?;
+    let unique_parameter = unique_simbol();
 
-    infer(type_environment, body)
+    let parameter_type = Type::Variable {
+        name: unique_parameter.clone(),
+    };
+
+    let type_environment =
+        type_environment.substitute_variable(parameter.clone(), parameter_type.clone())?;
+
+    let (type_environment, body_type) = infer(type_environment, body)?;
+    let substitued_body_type = body_type.apply_substitution(parameter, unique_parameter);
+
+    Ok((
+        type_environment,
+        Type::Function {
+            domain: parameter_type.clone().into(),
+            range: substitued_body_type.into(),
+        },
+    ))
 }
 
 fn infer_app(
@@ -196,16 +211,15 @@ fn infer_app(
     function: Expression,
     argument: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
-    let (_, function_type) = infer(type_environment.clone(), function.clone())?;
-    let (domain, range) = match function_type {
-        Type::Function { domain, range } => (*domain, *range),
-        _ => bail!(TypeInferenceError::InvalidType(function)),
+    let (type_environment, function_type) = infer(type_environment, function.clone())?;
+    let Type::Function { domain, range } = function_type else {
+        bail!(TypeInferenceError::InvalidType(function));
     };
 
-    let (_, argument_type) = infer(type_environment.clone(), argument.clone())?;
-    let type_environment = type_environment.add_constraint(domain, argument_type);
+    let (type_environment, argument_type) = infer(type_environment, argument.clone())?;
+    let type_environment = type_environment.add_equation(*domain, argument_type);
 
-    Ok((type_environment, range))
+    Ok((type_environment, *range))
 }
 
 #[cfg(test)]
