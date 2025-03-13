@@ -1,7 +1,5 @@
-use std::collections::HashSet;
-
 use crate::{
-    adapter::unique_simbol,
+    adapter::{Symbol, TypeTraverseHistory, unique_simbol},
     type_system::{
         type_environment::TypeEnvironment,
         types::{BaseType, Type},
@@ -28,8 +26,8 @@ pub fn type_inference(
 ) -> Result<(TypeEnvironment, Type)> {
     let (inferred_environment, inferred_type) = infer(type_environment, expression)?;
     let unified_environment = inferred_environment.unify_equations()?;
-    println!("{:?}", unified_environment);
-    let normalized_type = unified_environment.normalize_type(HashSet::new(), inferred_type)?;
+    let normalized_type =
+        unified_environment.normalize_type(TypeTraverseHistory::new(), inferred_type)?;
 
     Ok((unified_environment, normalized_type))
 }
@@ -170,7 +168,7 @@ fn infer_if(
 
 fn infer_let(
     type_environment: TypeEnvironment,
-    variable: String,
+    variable: Symbol,
     bound: Expression,
     body: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
@@ -182,7 +180,7 @@ fn infer_let(
 
 fn infer_fun(
     type_environment: TypeEnvironment,
-    parameter: String,
+    parameter: Symbol,
     body: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
     let unique_parameter = unique_simbol();

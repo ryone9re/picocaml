@@ -4,9 +4,14 @@ use anyhow::{Result, anyhow, bail};
 use thiserror::Error;
 
 use crate::{
-    adapter::Symbol,
-    type_system::{types::Type, unification::Equations},
+    adapter::{Symbol, TypeTraverseHistory},
+    type_system::{
+        types::Type,
+        unification::{Equations, get_equation},
+    },
 };
+
+use super::unification::{add_equation, unify};
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 enum NormalizeError {
@@ -38,7 +43,7 @@ impl TypeEnvironment {
     }
 
     pub fn add_equation(self, type1: Type, type2: Type) -> Self {
-        let equations = self.equations.add(type1, type2);
+        let equations = add_equation(self.equations, type1, type2);
 
         Self {
             variable_types: self.variable_types,
@@ -47,7 +52,7 @@ impl TypeEnvironment {
     }
 
     pub fn unify_equations(self) -> Result<Self> {
-        let equations = self.equations.unify()?;
+        let equations = unify(self.equations.clone(), Equations::new())?;
 
         Ok(Self {
             variable_types: self.variable_types,
@@ -55,30 +60,21 @@ impl TypeEnvironment {
         })
     }
 
-    pub fn normalize_type(&self, visited: HashSet<Type>, t: Type) -> Result<Type> {
-        let normalized = match t {
-            Type::Base(base_type) => Type::Base(base_type),
+    pub fn normalize_type(&self, mut visited: TypeTraverseHistory, t: Type) -> Result<Type> {
+        match t {
+            Type::Base(base_type) => Ok(Type::Base(base_type)),
             variable @ Type::Variable { name: _ } => {
                 if visited.contains(&variable) {
                     bail!(NormalizeError::CyclicTypeReference);
                 }
-                self.equations
-                    .get(variable)
-                    .ok_or(anyhow!(NormalizeError::UnresolvedType))?
+                visited.insert(variable.clone());
+                get_equation(&self.equations, variable)
+                    .ok_or(anyhow!(NormalizeError::UnresolvedType))
             }
-            Type::Function { domain, range } => {
-                let domain = self.normalize_type(visited.clone(), *domain)?;
-                let range = self.normalize_type(visited.clone(), *range)?;
-
-                Type::Function {
-                    domain: domain.into(),
-                    range: range.into(),
-                }
-            }
-        };
-
-        println!("{:?}", normalized);
-
-        Ok(normalized)
+            Type::Function { domain, range } => Ok(Type::Function {
+                domain: self.normalize_type(visited.clone(), *domain)?.into(),
+                range: self.normalize_type(visited.clone(), *range)?.into(),
+            }),
+        }
     }
 }

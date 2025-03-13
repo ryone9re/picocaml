@@ -1,6 +1,11 @@
-use std::ops::{Add, Mul, Sub};
+use std::{
+    collections::HashSet,
+    ops::{Add, Mul, Sub},
+};
 
 use uuid::Uuid;
+
+use crate::type_system::types::Type;
 
 pub(crate) type RInteger = isize;
 pub(crate) type RBool = bool;
@@ -30,3 +35,5 @@ pub(crate) fn r_lt(lhs: RInteger, rhs: RInteger) -> RBool {
 pub(crate) fn unique_simbol() -> Symbol {
     Uuid::now_v7().to_string()
 }
+
+pub(crate) type TypeTraverseHistory = HashSet<Type>;

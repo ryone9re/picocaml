@@ -20,27 +20,37 @@ impl Type {
         new_variable_name: Symbol,
     ) -> Self {
         match self {
-            Type::Base(base_type) => Type::Base(base_type),
-            Type::Variable { name } => {
-                let new_name = if name == target_variable_name {
+            Type::Variable { name } => Type::Variable {
+                name: if name == target_variable_name {
                     new_variable_name
                 } else {
                     name
-                };
+                },
+            },
+            Type::Function { domain, range } => Type::Function {
+                domain: domain
+                    .apply_substitution(target_variable_name.clone(), new_variable_name.clone())
+                    .into(),
+                range: range
+                    .apply_substitution(target_variable_name.clone(), new_variable_name.clone())
+                    .into(),
+            },
+            t => t,
+        }
+    }
 
-                Type::Variable { name: new_name }
-            }
-            Type::Function { domain, range } => {
-                let domain = domain
-                    .apply_substitution(target_variable_name.clone(), new_variable_name.clone());
-                let range = range
-                    .apply_substitution(target_variable_name.clone(), new_variable_name.clone());
-
-                Type::Function {
-                    domain: domain.into(),
-                    range: range.into(),
-                }
-            }
+    pub fn apply_substitution_for_type(self, target_variable_name: Symbol, new_type: Type) -> Self {
+        match self {
+            Type::Variable { name } if name == target_variable_name => new_type,
+            Type::Function { domain, range } => Type::Function {
+                domain: domain
+                    .apply_substitution_for_type(target_variable_name.clone(), new_type.clone())
+                    .into(),
+                range: range
+                    .apply_substitution_for_type(target_variable_name.clone(), new_type.clone())
+                    .into(),
+            },
+            t => t,
         }
     }
 }
