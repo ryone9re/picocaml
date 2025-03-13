@@ -3,7 +3,10 @@ use std::collections::HashSet;
 use anyhow::{Result, bail};
 use thiserror::Error;
 
-use crate::{adapter::Symbol, type_system::types::Type};
+use crate::{
+    adapter::{Symbol, SymbolTraverseHistory},
+    type_system::types::Type,
+};
 
 #[derive(Debug, Error)]
 enum UnificationError {
@@ -22,17 +25,35 @@ pub fn add_equation(equations: Equations, type1: Type, type2: Type) -> Equations
 }
 
 pub fn get_equation(equations: &Equations, t: Type) -> Option<Type> {
-    let t @ Type::Variable { name: _ } = t else {
-        return None;
+    get_equation_internal(equations, t, &mut SymbolTraverseHistory::new())
+}
+
+fn get_equation_internal(
+    equations: &Equations,
+    t: Type,
+    visited: &mut SymbolTraverseHistory,
+) -> Option<Type> {
+    let Type::Variable { name } = t.clone() else {
+        return Some(t);
     };
 
-    equations
+    if visited.contains(&name) {
+        return Some(t);
+    }
+    visited.insert(name.clone());
+
+    let replacement = equations
         .iter()
         .find_map(|(t1, t2)| match (*t1 == t, *t2 == t) {
             (true, _) => Some(t2.clone()),
             (_, true) => Some(t1.clone()),
             _ => None,
-        })
+        });
+
+    match replacement {
+        Some(new_type) if new_type != t => get_equation_internal(equations, new_type, visited),
+        _ => replacement.or(Some(t)),
+    }
 }
 
 fn add_equations(equations: Equations, addee: Vec<(Type, Type)>) -> Equations {

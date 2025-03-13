@@ -36,4 +36,5 @@ pub(crate) fn unique_simbol() -> Symbol {
     Uuid::now_v7().to_string()
 }
 
+pub(crate) type SymbolTraverseHistory = HashSet<Symbol>;
 pub(crate) type TypeTraverseHistory = HashSet<Type>;
