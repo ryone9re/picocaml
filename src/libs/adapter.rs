@@ -32,7 +32,7 @@ pub(crate) fn r_lt(lhs: RInteger, rhs: RInteger) -> RBool {
     lhs.lt(&rhs)
 }
 
-pub(crate) fn unique_simbol() -> Symbol {
+pub(crate) fn unique_symbol() -> Symbol {
     Uuid::now_v7().to_string()
 }
 

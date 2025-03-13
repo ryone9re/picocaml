@@ -1,5 +1,5 @@
 use crate::{
-    adapter::{Symbol, TypeTraverseHistory, unique_simbol},
+    adapter::{Symbol, TypeTraverseHistory, unique_symbol},
     type_system::{
         type_environment::TypeEnvironment,
         types::{BaseType, Type},
@@ -183,7 +183,7 @@ fn infer_fun(
     parameter: Symbol,
     body: Expression,
 ) -> Result<(TypeEnvironment, Type)> {
-    let unique_parameter = unique_simbol();
+    let unique_parameter = unique_symbol();
 
     let parameter_type = Type::Variable {
         name: unique_parameter.clone(),
