@@ -20,12 +20,8 @@ impl Type {
         new_variable_name: Symbol,
     ) -> Self {
         match self {
-            Type::Variable { name } => Type::Variable {
-                name: if name == target_variable_name {
-                    new_variable_name
-                } else {
-                    name
-                },
+            Type::Variable { name } if name == target_variable_name => Type::Variable {
+                name: new_variable_name,
             },
             Type::Function { domain, range } => Type::Function {
                 domain: domain
