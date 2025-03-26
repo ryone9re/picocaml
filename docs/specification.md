@@ -18,7 +18,7 @@
          | "let" "rec" <identifier> "=" "fun" <identifier> "->" <expression> "in" <expression>
          | <nil>
          | <expression> "::" <expression>
-         | "match" <expression> "with" <nil> "->" <expression> ["|" <identifier> "::" <identifier> "->" <expression>]
+         | "match" <expression> "with" <nil> "->" <expression> "|" <identifier> "::" <identifier> "->" <expression>
          | "(" <expression> ")"
 
 <integer_literal> ::= ["-"] <digit> {<digit>}
