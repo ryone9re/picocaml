@@ -9,6 +9,7 @@ pub enum BaseType {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     Base(BaseType),
+    List(Box<Type>),
     Variable { name: Symbol },
     Function { domain: Box<Type>, range: Box<Type> },
 }

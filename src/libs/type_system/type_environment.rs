@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Ok, Result, anyhow, bail};
 use thiserror::Error;
 
 use crate::{
@@ -63,7 +63,8 @@ impl TypeEnvironment {
     pub fn normalize_type(&self, mut visited: TypeTraverseHistory, t: Type) -> Result<Type> {
         match t {
             Type::Base(base_type) => Ok(Type::Base(base_type)),
-            variable @ Type::Variable { name: _ } => {
+            Type::List(t) => Ok(Type::List(self.normalize_type(visited, *t)?.into())),
+            variable @ Type::Variable { .. } => {
                 if visited.contains(&variable) {
                     bail!(NormalizeError::CyclicTypeReference);
                 }

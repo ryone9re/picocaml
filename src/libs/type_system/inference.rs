@@ -72,14 +72,19 @@ fn infer(
             variable,
             bound_function,
             body,
-        } => todo!(),
-        Expression::Nil => todo!(),
-        Expression::Cons { car, cdr } => todo!(),
+        } => infer_let_rec(type_environment, variable, *bound_function, *body),
+        Expression::Nil => infer_nil(type_environment),
+        Expression::Cons { car, cdr } => infer_cons(type_environment, *car, *cdr),
         Expression::Match {
             scrutinee,
             nil_case,
-            cons_pattern,
-        } => todo!(),
+            cons_pattern: (car, cdr, cons_case),
+        } => infer_match(
+            type_environment,
+            *scrutinee,
+            *nil_case,
+            (car, cdr, *cons_case),
+        ),
     }
 }
 
@@ -218,6 +223,102 @@ fn infer_app(
     let type_environment = type_environment.add_equation(*domain, argument_type);
 
     Ok((type_environment, *range))
+}
+
+fn infer_let_rec(
+    type_environment: TypeEnvironment,
+    variable: Symbol,
+    bound_function: Expression,
+    body: Expression,
+) -> Result<(TypeEnvironment, Type)> {
+    let recursive_function_argument_type = Type::Variable {
+        name: unique_symbol(),
+    };
+    let recursive_function_return_type = Type::Variable {
+        name: unique_symbol(),
+    };
+
+    let type_environment = type_environment.substitute_variable(
+        variable,
+        Type::Function {
+            domain: recursive_function_argument_type.clone().into(),
+            range: recursive_function_return_type.clone().into(),
+        },
+    )?;
+
+    let (type_environment, bound_function_type) = infer(type_environment, bound_function.clone())?;
+    let Type::Function { domain, range } = bound_function_type else {
+        bail!(TypeInferenceError::InvalidType(bound_function));
+    };
+
+    let type_environment = type_environment
+        .add_equation(recursive_function_argument_type, *domain)
+        .add_equation(recursive_function_return_type, *range);
+
+    let (type_environment, body_type) = infer(type_environment, body)?;
+
+    Ok((type_environment, body_type))
+}
+
+fn infer_nil(type_environment: TypeEnvironment) -> Result<(TypeEnvironment, Type)> {
+    Ok((
+        type_environment,
+        Type::List(
+            Type::Variable {
+                name: unique_symbol(),
+            }
+            .into(),
+        ),
+    ))
+}
+
+fn infer_cons(
+    type_environment: TypeEnvironment,
+    car: Expression,
+    cdr: Expression,
+) -> Result<(TypeEnvironment, Type)> {
+    let (type_environment, car_type) = infer(type_environment, car)?;
+
+    let (type_environment, cdr_type) = infer(type_environment, cdr.clone())?;
+    let Type::List(element_type) = cdr_type.clone() else {
+        bail!(TypeInferenceError::InvalidType(cdr));
+    };
+
+    let type_environment = type_environment.add_equation(car_type, *element_type);
+
+    Ok((type_environment, cdr_type))
+}
+
+fn infer_match(
+    type_environment: TypeEnvironment,
+    scrutinee: Expression,
+    nil_case: Expression,
+    (car, cdr, cons_case): (Symbol, Symbol, Expression),
+) -> Result<(TypeEnvironment, Type)> {
+    let (type_environment, scrutinee_type) = infer(type_environment, scrutinee.clone())?;
+    let (type_environment, element_type) = match scrutinee_type {
+        Type::List(element_type) => (type_environment, *element_type),
+        variable @ Type::Variable { .. } => {
+            let element_type = Type::Variable {
+                name: unique_symbol(),
+            };
+            let type_environment =
+                type_environment.add_equation(variable, Type::List(element_type.clone().into()));
+            (type_environment, element_type)
+        }
+        _ => bail!(TypeInferenceError::InvalidType(scrutinee.clone())),
+    };
+
+    let (type_environment, nil_case_type) = infer(type_environment, nil_case)?;
+
+    let type_environment = type_environment
+        .substitute_variable(car, element_type.clone())?
+        .substitute_variable(cdr, Type::List(element_type.into()))?;
+    let (type_environment, cons_case_type) = infer(type_environment, cons_case)?;
+    let type_environment =
+        type_environment.add_equation(nil_case_type.clone(), cons_case_type.clone());
+
+    Ok((type_environment, nil_case_type))
 }
 
 #[cfg(test)]
@@ -555,30 +656,32 @@ mod test {
         assert_eq!(ty, Type::Base(BaseType::Integer));
     }
 
-    // #[test]
-    // fn test_infer_nil() {
-    //     let expr = Expression::Nil;
+    #[test]
+    fn test_infer_nil() {
+        let expr = Expression::Nil;
 
-    //     let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
-    //     assert!(result.is_ok());
-    //     let (_, ty) = result.unwrap();
-    //     assert!(matches!(ty, Type::Cons));
-    // }
+        assert!(result.is_ok());
+        let (_, ty) = result.unwrap();
+        assert!(matches!(ty, Type::List(_)));
+    }
 
-    // #[test]
-    // fn test_infer_cons() {
-    //     let expr = Expression::Cons {
-    //         car: Expression::Integer(1).into(),
-    //         cdr: Expression::Nil.into(),
-    //     };
+    #[test]
+    fn test_infer_cons() {
+        let expr = Expression::Cons {
+            car: Expression::Integer(1).into(),
+            cdr: Expression::Nil.into(),
+        };
 
-    //     let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expr);
 
-    //     assert!(result.is_ok());
-    //     let (_, ty) = result.unwrap();
-    //     assert!(matches!(ty, Type::Cons));
-    // }
+        assert!(result.is_ok());
+        let (_, ty) = result.unwrap();
+        assert!(
+            matches!(ty, Type::List(element_type) if matches!(*element_type, Type::Base(BaseType::Integer)))
+        );
+    }
 
     #[test]
     fn test_infer_cons_with_invalid_elements() {
@@ -803,6 +906,8 @@ mod test {
         };
 
         let result = type_inference(TypeEnvironment::default(), expr);
+
+        println!("{:#?}", result);
 
         assert!(result.is_ok());
         let (_, ty) = result.unwrap();
