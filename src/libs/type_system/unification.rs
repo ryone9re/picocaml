@@ -94,6 +94,7 @@ pub fn unify(equations: Equations, substitutions: Equations) -> Result<Equations
             let new_equations = add_equation(new_equations, *range1, *range2);
             unify(new_equations, substitutions)
         }
+        // (EU{(List(t1),List(t2))},S) => (EU{(t1,t2)},S)
         (Type::List(t1), Type::List(t2)) => {
             let new_equations = add_equation(remaining, *t1, *t2);
             unify(new_equations, substitutions)
