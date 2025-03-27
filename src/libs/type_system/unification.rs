@@ -56,14 +56,6 @@ fn get_equation_internal(
     }
 }
 
-fn add_equations(equations: Equations, addee: Vec<(Type, Type)>) -> Equations {
-    let mut equations = equations.clone();
-    addee.into_iter().for_each(|(t1, t2)| {
-        equations.insert((t1, t2));
-    });
-    equations
-}
-
 fn pick_equation(equations: &Equations) -> Option<(Type, Type)> {
     equations.iter().last().cloned()
 }
@@ -98,8 +90,12 @@ pub fn unify(equations: Equations, substitutions: Equations) -> Result<Equations
                 range: range2,
             },
         ) => {
-            let new_equations =
-                add_equations(remaining, vec![(*domain1, *domain2), (*range1, *range2)]);
+            let new_equations = add_equation(remaining, *domain1, *domain2);
+            let new_equations = add_equation(new_equations, *range1, *range2);
+            unify(new_equations, substitutions)
+        }
+        (Type::List(t1), Type::List(t2)) => {
+            let new_equations = add_equation(remaining, *t1, *t2);
             unify(new_equations, substitutions)
         }
         _ => bail!(UnificationError::Impossible),
