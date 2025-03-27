@@ -10,4 +10,4 @@ path = "src/libs/lib.rs"
 [dependencies]
 anyhow = "1.0.97"
 thiserror = "2.0.12"
-uuid = { version = "1.15.1", features = ["v7"] }
+nanoid = "0.4.0"

@@ -3,7 +3,7 @@ use std::{
     ops::{Add, Mul, Sub},
 };
 
-use uuid::Uuid;
+use nanoid::nanoid;
 
 use crate::type_system::types::Type;
 
@@ -33,7 +33,7 @@ pub(crate) fn r_lt(lhs: RInteger, rhs: RInteger) -> RBool {
 }
 
 pub(crate) fn unique_symbol() -> Symbol {
-    Uuid::now_v7().to_string()
+    nanoid!()
 }
 
 pub(crate) type SymbolTraverseHistory = HashSet<Symbol>;
