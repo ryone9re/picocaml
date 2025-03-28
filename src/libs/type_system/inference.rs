@@ -237,13 +237,13 @@ fn infer_let_rec(
         name: unique_symbol(),
     };
 
-    // let free_variables = type_environment.get_unbound_variables(
-    //     free_type_variables(Type::Function {
-    //         domain: recursive_function_argument_type.clone().into(),
-    //         range: recursive_function_return_type.clone().into(),
-    //     })
-    //     .into_iter(),
-    // );
+    let free_variables = type_environment.get_unbound_variables(
+        free_type_variables(Type::Function {
+            domain: recursive_function_argument_type.clone().into(),
+            range: recursive_function_return_type.clone().into(),
+        })
+        .into_iter(),
+    );
 
     let type_environment = type_environment.substitute_variable(
         variable.clone(),
@@ -324,14 +324,11 @@ fn infer_match(
     let type_environment = type_environment
         .substitute_variable(
             car.clone(),
-            TypeScheme::new_polymorphic_type_scheme(vec![car].into_iter(), element_type.clone()),
+            TypeScheme::new_monomorphic_type_scheme(element_type.clone()),
         )?
         .substitute_variable(
             cdr.clone(),
-            TypeScheme::new_polymorphic_type_scheme(
-                vec![cdr].into_iter(),
-                Type::List(element_type.into()),
-            ),
+            TypeScheme::new_monomorphic_type_scheme(Type::List(element_type.into())),
         )?;
     let (type_environment, cons_case_type) = infer(type_environment, cons_case)?;
     let type_environment =
