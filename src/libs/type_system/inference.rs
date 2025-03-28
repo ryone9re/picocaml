@@ -10,6 +10,8 @@ use thiserror::Error;
 
 use crate::syntax::ast::Expression;
 
+type InferenceResult = Result<(TypeEnvironment, Type)>;
+
 #[derive(Debug, Error)]
 enum TypeInferenceError {
     #[error("Inference impossible: {0}")]
@@ -23,7 +25,7 @@ enum TypeInferenceError {
 pub fn type_inference(
     type_environment: TypeEnvironment,
     expression: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+) -> InferenceResult {
     let (inferred_environment, inferred_type) = infer(type_environment, expression)?;
     let unified_environment = inferred_environment.unify_equations()?;
     let normalized_type =
@@ -32,10 +34,7 @@ pub fn type_inference(
     Ok((unified_environment, normalized_type))
 }
 
-fn infer(
-    type_environment: TypeEnvironment,
-    expression: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+fn infer(type_environment: TypeEnvironment, expression: Expression) -> InferenceResult {
     match expression {
         Expression::Integer(_) => infer_integer(type_environment, expression),
         Expression::Bool(_) => infer_bool(type_environment, expression),
@@ -88,30 +87,21 @@ fn infer(
     }
 }
 
-fn infer_integer(
-    type_environment: TypeEnvironment,
-    expression: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+fn infer_integer(type_environment: TypeEnvironment, expression: Expression) -> InferenceResult {
     match expression {
         Expression::Integer(_) => Ok((type_environment, Type::Base(BaseType::Integer))),
         _ => bail!(TypeInferenceError::Impossible(expression)),
     }
 }
 
-fn infer_bool(
-    type_environment: TypeEnvironment,
-    expression: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+fn infer_bool(type_environment: TypeEnvironment, expression: Expression) -> InferenceResult {
     match expression {
         Expression::Bool(_) => Ok((type_environment, Type::Base(BaseType::Bool))),
         _ => bail!(TypeInferenceError::Impossible(expression)),
     }
 }
 
-fn infer_variable(
-    type_environment: TypeEnvironment,
-    expression: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+fn infer_variable(type_environment: TypeEnvironment, expression: Expression) -> InferenceResult {
     match &expression {
         Expression::Variable(name) => {
             let variable_type = type_environment
@@ -128,7 +118,7 @@ fn infer_binary_operation(
     type_environment: TypeEnvironment,
     expression1: Expression,
     expression2: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+) -> InferenceResult {
     let (type_environment, expression1_type) = infer(type_environment, expression1)?;
     let (type_environment, expression2_type) = infer(type_environment, expression2)?;
 
@@ -142,7 +132,7 @@ fn infer_binary_predicate(
     type_environment: TypeEnvironment,
     expression1: Expression,
     expression2: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+) -> InferenceResult {
     let (type_environment, expression1_type) = infer(type_environment, expression1)?;
     let (type_environment, expression2_type) = infer(type_environment, expression2)?;
 
@@ -157,7 +147,7 @@ fn infer_if(
     predicate: Expression,
     consequent: Expression,
     alternative: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+) -> InferenceResult {
     let (type_environment, predicate_type) = infer(type_environment, predicate.clone())?;
     let type_environment =
         type_environment.add_equation(predicate_type.clone(), Type::Base(BaseType::Bool));
@@ -176,7 +166,7 @@ fn infer_let(
     variable: Symbol,
     bound: Expression,
     body: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+) -> InferenceResult {
     let (type_environment, bound_type) = infer(type_environment, bound)?;
     let type_environment = type_environment.substitute_variable(variable, bound_type)?;
 
@@ -187,7 +177,7 @@ fn infer_fun(
     type_environment: TypeEnvironment,
     parameter: Symbol,
     body: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+) -> InferenceResult {
     let unique_parameter = unique_symbol();
 
     let parameter_type = Type::Variable {
@@ -213,7 +203,7 @@ fn infer_app(
     type_environment: TypeEnvironment,
     function: Expression,
     argument: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+) -> InferenceResult {
     let (type_environment, function_type) = infer(type_environment, function.clone())?;
     let Type::Function { domain, range } = function_type else {
         bail!(TypeInferenceError::InvalidType(function));
@@ -230,7 +220,7 @@ fn infer_let_rec(
     variable: Symbol,
     bound_function: Expression,
     body: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+) -> InferenceResult {
     let recursive_function_argument_type = Type::Variable {
         name: unique_symbol(),
     };
@@ -260,7 +250,7 @@ fn infer_let_rec(
     Ok((type_environment, body_type))
 }
 
-fn infer_nil(type_environment: TypeEnvironment) -> Result<(TypeEnvironment, Type)> {
+fn infer_nil(type_environment: TypeEnvironment) -> InferenceResult {
     Ok((
         type_environment,
         Type::List(
@@ -276,7 +266,7 @@ fn infer_cons(
     type_environment: TypeEnvironment,
     car: Expression,
     cdr: Expression,
-) -> Result<(TypeEnvironment, Type)> {
+) -> InferenceResult {
     let (type_environment, car_type) = infer(type_environment, car)?;
 
     let (type_environment, cdr_type) = infer(type_environment, cdr.clone())?;
@@ -294,7 +284,7 @@ fn infer_match(
     scrutinee: Expression,
     nil_case: Expression,
     (car, cdr, cons_case): (Symbol, Symbol, Expression),
-) -> Result<(TypeEnvironment, Type)> {
+) -> InferenceResult {
     let (type_environment, scrutinee_type) = infer(type_environment, scrutinee.clone())?;
     let (type_environment, element_type) = match scrutinee_type {
         Type::List(element_type) => (type_environment, *element_type),
