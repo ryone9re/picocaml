@@ -897,7 +897,259 @@ mod test {
 
         let result = type_inference(TypeEnvironment::default(), expr);
 
-        println!("{:#?}", result);
+        assert!(result.is_ok());
+        let (_, ty) = result.unwrap();
+        assert_eq!(ty, Type::Base(BaseType::Integer));
+    }
+
+    #[test]
+    fn test_infer_polymorphic_identity() {
+        // id = fun x -> x で、多相的な関数
+        let id_function = Expression::Fun {
+            parameter: "x".to_string(),
+            body: Expression::Variable("x".to_string()).into(),
+        };
+
+        // id を使って異なる型に適用するケース
+        let expr = Expression::Let {
+            variable: "id".to_string(),
+            bound: id_function.into(),
+            body: Expression::If {
+                predicate: Expression::App {
+                    function: Expression::Variable("id".to_string()).into(),
+                    argument: Expression::Bool(true).into(),
+                }
+                .into(),
+                consequent: Expression::App {
+                    function: Expression::Variable("id".to_string()).into(),
+                    argument: Expression::Integer(42).into(),
+                }
+                .into(),
+                alternative: Expression::Integer(0).into(),
+            }
+            .into(),
+        };
+
+        let result = type_inference(TypeEnvironment::default(), expr);
+
+        assert!(result.is_ok());
+        let (_, ty) = result.unwrap();
+        assert_eq!(ty, Type::Base(BaseType::Integer));
+    }
+
+    #[test]
+    fn test_infer_polymorphic_map() {
+        // map 関数の定義 (fun f -> fun xs -> match xs with [] -> [] | h::t -> (f h)::(map f t))
+        let map_function = Expression::Fun {
+            parameter: "f".to_string(),
+            body: Expression::Fun {
+                parameter: "xs".to_string(),
+                body: Expression::Match {
+                    scrutinee: Expression::Variable("xs".to_string()).into(),
+                    nil_case: Expression::Nil.into(),
+                    cons_pattern: (
+                        "h".to_string(),
+                        "t".to_string(),
+                        Expression::Cons {
+                            car: Expression::App {
+                                function: Expression::Variable("f".to_string()).into(),
+                                argument: Expression::Variable("h".to_string()).into(),
+                            }
+                            .into(),
+                            cdr: Expression::App {
+                                function: Expression::App {
+                                    function: Expression::Variable("map".to_string()).into(),
+                                    argument: Expression::Variable("f".to_string()).into(),
+                                }
+                                .into(),
+                                argument: Expression::Variable("t".to_string()).into(),
+                            }
+                            .into(),
+                        }
+                        .into(),
+                    ),
+                }
+                .into(),
+            }
+            .into(),
+        };
+
+        // 整数リスト [1;2;3]
+        let int_list = Expression::Cons {
+            car: Expression::Integer(1).into(),
+            cdr: Expression::Cons {
+                car: Expression::Integer(2).into(),
+                cdr: Expression::Cons {
+                    car: Expression::Integer(3).into(),
+                    cdr: Expression::Nil.into(),
+                }
+                .into(),
+            }
+            .into(),
+        };
+
+        // 整数に1を加える関数
+        let add_one = Expression::Fun {
+            parameter: "x".to_string(),
+            body: Expression::Plus {
+                expression1: Expression::Variable("x".to_string()).into(),
+                expression2: Expression::Integer(1).into(),
+            }
+            .into(),
+        };
+
+        // 整数を真偽値に変換する関数（0より大きいかどうか）
+        let positive = Expression::Fun {
+            parameter: "x".to_string(),
+            body: Expression::LessThan {
+                expression1: Expression::Integer(0).into(),
+                expression2: Expression::Variable("x".to_string()).into(),
+            }
+            .into(),
+        };
+
+        // map関数を使って、同じリストに対して異なる変換を適用
+        let expr = Expression::LetRec {
+            variable: "map".to_string(),
+            bound_function: map_function.into(),
+            body: Expression::Let {
+                variable: "int_list".to_string(),
+                bound: int_list.into(),
+                body: Expression::Let {
+                    variable: "incremented".to_string(),
+                    bound: Expression::App {
+                        function: Expression::App {
+                            function: Expression::Variable("map".to_string()).into(),
+                            argument: add_one.into(),
+                        }
+                        .into(),
+                        argument: Expression::Variable("int_list".to_string()).into(),
+                    }
+                    .into(),
+                    body: Expression::App {
+                        function: Expression::App {
+                            function: Expression::Variable("map".to_string()).into(),
+                            argument: positive.into(),
+                        }
+                        .into(),
+                        argument: Expression::Variable("incremented".to_string()).into(),
+                    }
+                    .into(),
+                }
+                .into(),
+            }
+            .into(),
+        };
+
+        let result = type_inference(TypeEnvironment::default(), expr);
+
+        assert!(result.is_ok());
+        let (_, ty) = result.unwrap();
+        // 結果は bool のリスト
+        assert!(
+            matches!(ty, Type::List(element_type) if matches!(*element_type, Type::Base(BaseType::Bool)))
+        );
+    }
+
+    #[test]
+    fn test_polymorphic_compose() {
+        // 関数合成の定義: fun f -> fun g -> fun x -> f (g x)
+        let compose_function = Expression::Fun {
+            parameter: "f".to_string(),
+            body: Expression::Fun {
+                parameter: "g".to_string(),
+                body: Expression::Fun {
+                    parameter: "x".to_string(),
+                    body: Expression::App {
+                        function: Expression::Variable("f".to_string()).into(),
+                        argument: Expression::App {
+                            function: Expression::Variable("g".to_string()).into(),
+                            argument: Expression::Variable("x".to_string()).into(),
+                        }
+                        .into(),
+                    }
+                    .into(),
+                }
+                .into(),
+            }
+            .into(),
+        };
+
+        // 整数を文字列に変換する擬似関数（実際にはint->intで代用）
+        let int_to_string = Expression::Fun {
+            parameter: "n".to_string(),
+            body: Expression::Times {
+                expression1: Expression::Variable("n".to_string()).into(),
+                expression2: Expression::Integer(10).into(),
+            }
+            .into(),
+        };
+
+        // 整数を2倍にする関数
+        let double = Expression::Fun {
+            parameter: "n".to_string(),
+            body: Expression::Times {
+                expression1: Expression::Variable("n".to_string()).into(),
+                expression2: Expression::Integer(2).into(),
+            }
+            .into(),
+        };
+
+        // ブール値を整数に変換する擬似関数
+        let bool_to_int = Expression::Fun {
+            parameter: "b".to_string(),
+            body: Expression::If {
+                predicate: Expression::Variable("b".to_string()).into(),
+                consequent: Expression::Integer(1).into(),
+                alternative: Expression::Integer(0).into(),
+            }
+            .into(),
+        };
+
+        // 合成関数を使って異なる型の関数を合成
+        let expr = Expression::Let {
+            variable: "compose".to_string(),
+            bound: compose_function.into(),
+            body: Expression::Let {
+                variable: "string_of_int_doubled".to_string(),
+                bound: Expression::App {
+                    function: Expression::App {
+                        function: Expression::Variable("compose".to_string()).into(),
+                        argument: int_to_string.into(),
+                    }
+                    .into(),
+                    argument: double.into(),
+                }
+                .into(),
+                body: Expression::Let {
+                    variable: "int_of_bool".to_string(),
+                    bound: bool_to_int.into(),
+                    body: Expression::Let {
+                        variable: "string_of_bool".to_string(),
+                        bound: Expression::App {
+                            function: Expression::App {
+                                function: Expression::Variable("compose".to_string()).into(),
+                                argument: Expression::Variable("string_of_int_doubled".to_string())
+                                    .into(),
+                            }
+                            .into(),
+                            argument: Expression::Variable("int_of_bool".to_string()).into(),
+                        }
+                        .into(),
+                        body: Expression::App {
+                            function: Expression::Variable("string_of_bool".to_string()).into(),
+                            argument: Expression::Bool(true).into(),
+                        }
+                        .into(),
+                    }
+                    .into(),
+                }
+                .into(),
+            }
+            .into(),
+        };
+
+        let result = type_inference(TypeEnvironment::default(), expr);
 
         assert!(result.is_ok());
         let (_, ty) = result.unwrap();
