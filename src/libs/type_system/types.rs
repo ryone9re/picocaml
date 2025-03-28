@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::adapter::Symbol;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -49,5 +51,17 @@ impl Type {
             },
             t => t,
         }
+    }
+}
+
+pub fn free_type_variables(t: Type) -> HashSet<Symbol> {
+    match t {
+        Type::Variable { name } => HashSet::from_iter(vec![name]),
+        Type::Function { domain, range } => free_type_variables(*domain)
+            .union(&free_type_variables(*range))
+            .cloned()
+            .collect(),
+        Type::List(element_type) => free_type_variables(*element_type),
+        Type::Base(_) => HashSet::new(),
     }
 }
