@@ -230,44 +230,52 @@ fn infer_let_rec(
     bound_function: Expression,
     body: Expression,
 ) -> InferenceResult {
+    // 1. 仮の関数型を作成
     let recursive_function_argument_type = Type::Variable {
         name: unique_symbol(),
     };
     let recursive_function_return_type = Type::Variable {
         name: unique_symbol(),
     };
+    let recursice_function_type = Type::Function {
+        domain: recursive_function_argument_type.clone().into(),
+        range: recursive_function_return_type.clone().into(),
+    };
 
-    let free_variables = type_environment.get_unbound_variables(
-        free_type_variables(Type::Function {
-            domain: recursive_function_argument_type.clone().into(),
-            range: recursive_function_return_type.clone().into(),
-        })
-        .into_iter(),
-    );
-
-    let type_environment = type_environment.substitute_variable(
+    // 2. 単相的な型として関数を型環境に追加（関数本体の型推論用）
+    let temporal_environment = type_environment.substitute_variable(
         variable.clone(),
-        TypeScheme::new_polymorphic_type_scheme(
-            vec![variable].into_iter(),
-            Type::Function {
-                domain: recursive_function_argument_type.clone().into(),
-                range: recursive_function_return_type.clone().into(),
-            },
-        ),
+        TypeScheme::new_monomorphic_type_scheme(recursice_function_type.clone()),
     )?;
 
-    let (type_environment, bound_function_type) = infer(type_environment, bound_function.clone())?;
+    // 3. 関数本体の型推論
+    let (bound_function_environment, bound_function_type) =
+        infer(temporal_environment, bound_function.clone())?;
     let Type::Function { domain, range } = bound_function_type else {
         bail!(TypeInferenceError::InvalidType(bound_function));
     };
 
-    let type_environment = type_environment
-        .add_equation(recursive_function_argument_type, *domain)
-        .add_equation(recursive_function_return_type, *range);
+    // 4. 関数型の制約を追加
+    let type_environment = bound_function_environment
+        .add_equation(recursive_function_argument_type.clone(), *domain)
+        .add_equation(recursive_function_return_type.clone(), *range);
 
-    let (type_environment, body_type) = infer(type_environment, body)?;
+    // 5. 単一化して最終的な関数型を得る
+    let unified_environment = type_environment.clone().unify_equations()?;
+    let actual_function_type = unified_environment
+        .normalize_type(TypeTraverseHistory::new(), recursice_function_type.clone())?;
 
-    Ok((type_environment, body_type))
+    // 6. 自由型変数を抽出し、多相型化
+    let free_variables = type_environment
+        .get_unbound_variables(free_type_variables(actual_function_type.clone()).into_iter());
+
+    // 7. 多相型として関数を型環境に追加し、本体の型推論
+    let type_environment = type_environment.substitute_variable(
+        variable.clone(),
+        TypeScheme::new_polymorphic_type_scheme(free_variables.into_iter(), actual_function_type),
+    )?;
+
+    infer(type_environment, body)
 }
 
 fn infer_nil(type_environment: TypeEnvironment) -> InferenceResult {
@@ -959,6 +967,8 @@ mod test {
 
         let result = type_inference(TypeEnvironment::default(), expr);
 
+        println!("{:#?}", result);
+
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
         assert_eq!(t, Type::Base(BaseType::Integer));
@@ -1064,6 +1074,8 @@ mod test {
         };
 
         let result = type_inference(TypeEnvironment::default(), expr);
+
+        println!("{:#?}", result);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
