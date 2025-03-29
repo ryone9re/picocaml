@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 
 use crate::{adapter::Symbol, syntax::value::Value};
 
