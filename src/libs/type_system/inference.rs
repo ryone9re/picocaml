@@ -351,9 +351,9 @@ mod test {
 
     #[test]
     fn test_infer_integer() {
-        let expr = Expression::Integer(10);
+        let expression = Expression::Integer(10);
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -362,9 +362,9 @@ mod test {
 
     #[test]
     fn test_infer_bool() {
-        let expr = Expression::Bool(true);
+        let expression = Expression::Bool(true);
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -380,9 +380,9 @@ mod test {
             )
             .unwrap();
 
-        let expr = Expression::Variable("x".to_string());
+        let expression = Expression::Variable("x".to_string());
 
-        let result = infer(env, expr);
+        let result = infer(env, expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -391,21 +391,21 @@ mod test {
 
     #[test]
     fn test_infer_undefined_variable() {
-        let expr = Expression::Variable("unknown".to_string());
+        let expression = Expression::Variable("unknown".to_string());
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_err());
     }
 
     #[test]
     fn test_infer_plus() {
-        let expr = Expression::Plus {
+        let expression = Expression::Plus {
             expression1: Expression::Integer(3).into(),
             expression2: Expression::Integer(5).into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -414,12 +414,12 @@ mod test {
 
     #[test]
     fn test_infer_minus() {
-        let expr = Expression::Minus {
+        let expression = Expression::Minus {
             expression1: Expression::Integer(10).into(),
             expression2: Expression::Integer(5).into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -428,12 +428,12 @@ mod test {
 
     #[test]
     fn test_infer_times() {
-        let expr = Expression::Times {
+        let expression = Expression::Times {
             expression1: Expression::Integer(3).into(),
             expression2: Expression::Integer(5).into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -442,12 +442,12 @@ mod test {
 
     #[test]
     fn test_infer_less_than() {
-        let expr = Expression::LessThan {
+        let expression = Expression::LessThan {
             expression1: Expression::Integer(3).into(),
             expression2: Expression::Integer(5).into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -456,25 +456,25 @@ mod test {
 
     #[test]
     fn test_infer_invalid_operation() {
-        let expr = Expression::Plus {
+        let expression = Expression::Plus {
             expression1: Expression::Integer(3).into(),
             expression2: Expression::Bool(true).into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_err());
     }
 
     #[test]
     fn test_infer_if() {
-        let expr = Expression::If {
+        let expression = Expression::If {
             predicate: Expression::Bool(true).into(),
             consequent: Expression::Integer(1).into(),
             alternative: Expression::Integer(2).into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -483,33 +483,33 @@ mod test {
 
     #[test]
     fn test_infer_if_with_invalid_predicate() {
-        let expr = Expression::If {
+        let expression = Expression::If {
             predicate: Expression::Integer(1).into(),
             consequent: Expression::Integer(1).into(),
             alternative: Expression::Integer(2).into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_err());
     }
 
     #[test]
     fn test_infer_if_with_mismatched_branches() {
-        let expr = Expression::If {
+        let expression = Expression::If {
             predicate: Expression::Bool(true).into(),
             consequent: Expression::Integer(1).into(),
             alternative: Expression::Bool(false).into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_err());
     }
 
     #[test]
     fn test_infer_let() {
-        let expr = Expression::Let {
+        let expression = Expression::Let {
             variable: "x".to_string(),
             bound: Expression::Integer(5).into(),
             body: Expression::Plus {
@@ -519,7 +519,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -528,7 +528,7 @@ mod test {
 
     #[test]
     fn test_infer_let_with_complex_bound() {
-        let expr = Expression::Let {
+        let expression = Expression::Let {
             variable: "result".to_string(),
             bound: Expression::If {
                 predicate: Expression::Bool(true).into(),
@@ -539,7 +539,7 @@ mod test {
             body: Expression::Variable("result".to_string()).into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -548,7 +548,7 @@ mod test {
 
     #[test]
     fn test_infer_fun() {
-        let expr = Expression::Fun {
+        let expression = Expression::Fun {
             parameter: "x".to_string(),
             body: Expression::Plus {
                 expression1: Expression::Variable("x".to_string()).into(),
@@ -557,7 +557,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -573,12 +573,12 @@ mod test {
 
     #[test]
     fn test_infer_identity_fun() {
-        let expr = Expression::Fun {
+        let expression = Expression::Fun {
             parameter: "x".to_string(),
             body: Expression::Variable("x".to_string()).into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -604,12 +604,12 @@ mod test {
 
         let arg_expr = Expression::Integer(5);
 
-        let expr = Expression::App {
+        let expression = Expression::App {
             function: function_expr.into(),
             argument: arg_expr.into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -629,19 +629,19 @@ mod test {
 
         let arg_expr = Expression::Bool(true);
 
-        let expr = Expression::App {
+        let expression = Expression::App {
             function: function_expr.into(),
             argument: arg_expr.into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_err());
     }
 
     #[test]
     fn test_infer_let_rec() {
-        let expr = Expression::LetRec {
+        let expression = Expression::LetRec {
             variable: "fact".to_string(),
             bound_function: Expression::Fun {
                 parameter: "n".to_string(),
@@ -676,7 +676,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -685,9 +685,9 @@ mod test {
 
     #[test]
     fn test_infer_nil() {
-        let expr = Expression::Nil;
+        let expression = Expression::Nil;
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -696,12 +696,12 @@ mod test {
 
     #[test]
     fn test_infer_cons() {
-        let expr = Expression::Cons {
+        let expression = Expression::Cons {
             car: Expression::Integer(1).into(),
             cdr: Expression::Nil.into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -712,7 +712,7 @@ mod test {
 
     #[test]
     fn test_infer_cons_with_invalid_elements() {
-        let expr = Expression::Cons {
+        let expression = Expression::Cons {
             car: Expression::Integer(1).into(),
             cdr: Expression::Cons {
                 car: Expression::Bool(true).into(),
@@ -721,14 +721,14 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_err());
     }
 
     #[test]
     fn test_infer_match_nil_case() {
-        let expr = Expression::Match {
+        let expression = Expression::Match {
             scrutinee: Expression::Nil.into(),
             nil_case: Expression::Integer(0).into(),
             cons_pattern: (
@@ -742,7 +742,7 @@ mod test {
             ),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -751,7 +751,7 @@ mod test {
 
     #[test]
     fn test_infer_match_cons_case() {
-        let expr = Expression::Match {
+        let expression = Expression::Match {
             scrutinee: Expression::Cons {
                 car: Expression::Integer(1).into(),
                 cdr: Expression::Nil.into(),
@@ -769,7 +769,7 @@ mod test {
             ),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -778,7 +778,7 @@ mod test {
 
     #[test]
     fn test_infer_match_with_invalid_scrutinee() {
-        let expr = Expression::Match {
+        let expression = Expression::Match {
             scrutinee: Expression::Integer(5).into(),
             nil_case: Expression::Integer(0).into(),
             cons_pattern: (
@@ -792,14 +792,14 @@ mod test {
             ),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_err());
     }
 
     #[test]
     fn test_infer_match_with_mismatched_cases() {
-        let expr = Expression::Match {
+        let expression = Expression::Match {
             scrutinee: Expression::Nil.into(),
             nil_case: Expression::Integer(0).into(),
             cons_pattern: (
@@ -809,14 +809,14 @@ mod test {
             ),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_err());
     }
 
     #[test]
     fn test_infer_complex_arithmetic() {
-        let expr = Expression::Plus {
+        let expression = Expression::Plus {
             expression1: Expression::Integer(3).into(),
             expression2: Expression::Times {
                 expression1: Expression::Integer(5).into(),
@@ -825,7 +825,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -834,7 +834,7 @@ mod test {
 
     #[test]
     fn test_infer_complex_predicate() {
-        let expr = Expression::LessThan {
+        let expression = Expression::LessThan {
             expression1: Expression::Plus {
                 expression1: Expression::Integer(3).into(),
                 expression2: Expression::Integer(5).into(),
@@ -843,7 +843,7 @@ mod test {
             expression2: Expression::Integer(10).into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -852,7 +852,7 @@ mod test {
 
     #[test]
     fn test_infer_complex_function() {
-        let expr = Expression::Let {
+        let expression = Expression::Let {
             variable: "add".to_string(),
             bound: Expression::Fun {
                 parameter: "x".to_string(),
@@ -878,7 +878,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -922,7 +922,7 @@ mod test {
             .into(),
         };
 
-        let expr = Expression::LetRec {
+        let expression = Expression::LetRec {
             variable: "sum".to_string(),
             bound_function: sum_function.into(),
             body: Expression::App {
@@ -932,7 +932,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -946,7 +946,7 @@ mod test {
             body: Expression::Variable("x".to_string()).into(),
         };
 
-        let expr = Expression::Let {
+        let expression = Expression::Let {
             variable: "id".to_string(),
             bound: id_function.into(),
             body: Expression::If {
@@ -965,9 +965,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
-
-        println!("{:#?}", result);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -1041,7 +1039,7 @@ mod test {
             .into(),
         };
 
-        let expr = Expression::LetRec {
+        let expression = Expression::LetRec {
             variable: "map".to_string(),
             bound_function: map_function.into(),
             body: Expression::Let {
@@ -1073,9 +1071,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
-
-        println!("{:#?}", result);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
@@ -1135,7 +1131,7 @@ mod test {
             .into(),
         };
 
-        let expr = Expression::Let {
+        let expression = Expression::Let {
             variable: "compose".to_string(),
             bound: compose_function.into(),
             body: Expression::Let {
@@ -1177,7 +1173,7 @@ mod test {
             .into(),
         };
 
-        let result = type_inference(TypeEnvironment::default(), expr);
+        let result = type_inference(TypeEnvironment::default(), expression);
 
         assert!(result.is_ok());
         let (_, t) = result.unwrap();
