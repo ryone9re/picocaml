@@ -1103,7 +1103,7 @@ mod test {
             .into(),
         };
 
-        let int_to_string = Expression::Fun {
+        let multiply_by_10 = Expression::Fun {
             parameter: "n".to_string(),
             body: Expression::Times {
                 expression1: Expression::Variable("n".to_string()).into(),
@@ -1135,11 +1135,11 @@ mod test {
             variable: "compose".to_string(),
             bound: compose_function.into(),
             body: Expression::Let {
-                variable: "string_of_int_doubled".to_string(),
+                variable: "multiply_by_20".to_string(),
                 bound: Expression::App {
                     function: Expression::App {
                         function: Expression::Variable("compose".to_string()).into(),
-                        argument: int_to_string.into(),
+                        argument: multiply_by_10.into(),
                     }
                     .into(),
                     argument: double.into(),
@@ -1149,19 +1149,19 @@ mod test {
                     variable: "int_of_bool".to_string(),
                     bound: bool_to_int.into(),
                     body: Expression::Let {
-                        variable: "string_of_bool".to_string(),
+                        variable: "bool_to_int_multiplied".to_string(),
                         bound: Expression::App {
                             function: Expression::App {
                                 function: Expression::Variable("compose".to_string()).into(),
-                                argument: Expression::Variable("string_of_int_doubled".to_string())
-                                    .into(),
+                                argument: Expression::Variable("multiply_by_20".to_string()).into(),
                             }
                             .into(),
                             argument: Expression::Variable("int_of_bool".to_string()).into(),
                         }
                         .into(),
                         body: Expression::App {
-                            function: Expression::Variable("string_of_bool".to_string()).into(),
+                            function: Expression::Variable("bool_to_int_multiplied".to_string())
+                                .into(),
                             argument: Expression::Bool(true).into(),
                         }
                         .into(),
