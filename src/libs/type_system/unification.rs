@@ -131,7 +131,7 @@ fn unify2(
 fn occurs_check(variable_name: Symbol, t: Type) -> bool {
     match t {
         Type::Base(_) => false,
-        Type::List(_) => false,
+        Type::List(element_type) => occurs_check(variable_name.clone(), *element_type),
         Type::Variable { name } => variable_name == name,
         Type::Function { domain, range } => {
             occurs_check(variable_name.clone(), *domain)
