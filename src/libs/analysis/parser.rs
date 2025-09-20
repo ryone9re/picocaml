@@ -13,7 +13,7 @@ enum ParseError {
     InvalidSyntax(String),
 }
 
-pub fn parse(mut tokens: VecDeque<String>) -> Result<Expression> {
+pub fn parse_expression(mut tokens: VecDeque<String>) -> Result<Expression> {
     let token = tokens.pop_front();
 
     if let Some(token) = token {

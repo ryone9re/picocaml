@@ -1,6 +1,6 @@
 use anyhow::Result;
 use picocaml::{
-    analysis::{parser::parse, tokenizer::tokenize},
+    analysis::{parser::parse_expression, tokenizer::tokenize},
     execution::{environment::Environment, evaluation::eval},
     type_system::{inference::type_inference, type_environment::TypeEnvironment},
 };
@@ -16,7 +16,7 @@ fn main() -> Result<()> {
             Ok(line) => {
                 rl.add_history_entry(line.as_str())?;
 
-                match parse(tokenize(line)) {
+                match parse_expression(tokenize(line)) {
                     Ok(expression) => {
                         let infered =
                             type_inference(global_type_environment.clone(), expression.clone());
