@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, fmt::Display};
 
 use crate::adapter::Symbol;
 
@@ -14,6 +14,12 @@ pub enum Type {
     List(Box<Type>),
     Variable { name: Symbol },
     Function { domain: Box<Type>, range: Box<Type> },
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#?}", self)
+    }
 }
 
 impl Type {

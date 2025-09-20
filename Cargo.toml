@@ -8,6 +8,7 @@ name = "picocaml"
 path = "src/libs/lib.rs"
 
 [dependencies]
-anyhow = "1.0.97"
-thiserror = "2.0.12"
+anyhow = "1.0.100"
+thiserror = "2.0.16"
 nanoid = "0.4.0"
+rustyline = "17.0.1"

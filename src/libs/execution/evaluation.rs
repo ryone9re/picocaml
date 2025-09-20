@@ -10,6 +10,8 @@ use crate::{
     syntax::{ast::Expression, value::Value},
 };
 
+type EvalResult = Result<(Environment, Value)>;
+
 #[derive(Debug, Error)]
 enum EvalError {
     #[error("Invalid expression")]
@@ -18,7 +20,7 @@ enum EvalError {
     UndefinedVariable(Symbol),
 }
 
-pub fn eval(environment: Environment, expression: Expression) -> Result<(Environment, Value)> {
+pub fn eval(environment: Environment, expression: Expression) -> EvalResult {
     match expression {
         Expression::Integer(n) => eval_integer(environment, n),
         Expression::Bool(b) => eval_bool(environment, b),
@@ -66,15 +68,15 @@ pub fn eval(environment: Environment, expression: Expression) -> Result<(Environ
     }
 }
 
-fn eval_integer(environment: Environment, n: RInteger) -> Result<(Environment, Value)> {
+fn eval_integer(environment: Environment, n: RInteger) -> EvalResult {
     Ok((environment, Value::Integer(n)))
 }
 
-fn eval_bool(environment: Environment, b: RBool) -> Result<(Environment, Value)> {
+fn eval_bool(environment: Environment, b: RBool) -> EvalResult {
     Ok((environment, Value::Bool(b)))
 }
 
-fn eval_variable(environment: Environment, variable: Symbol) -> Result<(Environment, Value)> {
+fn eval_variable(environment: Environment, variable: Symbol) -> EvalResult {
     let value = environment
         .get(&variable)
         .ok_or(anyhow!(EvalError::UndefinedVariable(variable.clone())))?;
@@ -87,7 +89,7 @@ fn eval_arithmetic_operation(
     expression1: Expression,
     expression2: Expression,
     operation: RArithmeticOperation,
-) -> Result<(Environment, Value)> {
+) -> EvalResult {
     let (_, expression1) = eval(environment.clone(), expression1)?;
     let (_, expression2) = eval(environment.clone(), expression2)?;
 
@@ -105,7 +107,7 @@ fn eval_comparison_operation(
     expression1: Expression,
     expression2: Expression,
     operation: RComparisonOperation,
-) -> Result<(Environment, Value)> {
+) -> EvalResult {
     let (_, expression1) = eval(environment.clone(), expression1)?;
     let (_, expression2) = eval(environment.clone(), expression2)?;
 
@@ -123,7 +125,7 @@ fn eval_if(
     predicate: Expression,
     consequent: Expression,
     alternative: Expression,
-) -> Result<(Environment, Value)> {
+) -> EvalResult {
     let (_, predicate) = eval(environment.clone(), predicate)?;
 
     match predicate {
@@ -138,18 +140,14 @@ fn eval_let(
     variable: Symbol,
     bound: Expression,
     body: Expression,
-) -> Result<(Environment, Value)> {
+) -> EvalResult {
     let (_, bound) = eval(environment.clone(), bound)?;
     let new_environment = environment.bind(variable, bound)?;
 
     eval(new_environment, body)
 }
 
-fn eval_fun(
-    environment: Environment,
-    parameter: Symbol,
-    body: Expression,
-) -> Result<(Environment, Value)> {
+fn eval_fun(environment: Environment, parameter: Symbol, body: Expression) -> EvalResult {
     let captured_environment = environment.clone();
 
     Ok((
@@ -162,11 +160,7 @@ fn eval_fun(
     ))
 }
 
-fn eval_app(
-    environment: Environment,
-    function: Expression,
-    argument: Expression,
-) -> Result<(Environment, Value)> {
+fn eval_app(environment: Environment, function: Expression, argument: Expression) -> EvalResult {
     let (_, closure) = eval(environment.clone(), function)?;
     let (_, argument) = eval(environment.clone(), argument)?;
 
@@ -206,7 +200,7 @@ fn eval_let_rec(
     variable: Symbol,
     bound_function: Expression,
     body: Expression,
-) -> Result<(Environment, Value)> {
+) -> EvalResult {
     if let Expression::Fun {
         parameter,
         body: function_body,
@@ -230,15 +224,11 @@ fn eval_let_rec(
     eval(environment, body)
 }
 
-fn eval_nil(environment: Environment) -> Result<(Environment, Value)> {
+fn eval_nil(environment: Environment) -> EvalResult {
     Ok((environment, Value::Nil))
 }
 
-fn eval_cons(
-    environment: Environment,
-    car: Expression,
-    cdr: Expression,
-) -> Result<(Environment, Value)> {
+fn eval_cons(environment: Environment, car: Expression, cdr: Expression) -> EvalResult {
     let (_, car) = eval(environment.clone(), car)?;
     let (_, cdr) = eval(environment.clone(), cdr)?;
 
@@ -256,7 +246,7 @@ fn eval_match(
     scrutinee: Expression,
     nil_case: Expression,
     cons_pattern: (Symbol, Symbol, Expression),
-) -> Result<(Environment, Value)> {
+) -> EvalResult {
     let (_, pattern) = eval(environment.clone(), scrutinee)?;
 
     match pattern {
