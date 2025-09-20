@@ -1,0 +1,10 @@
+let x = 41 in x + 1
+let rec fact = fun n -> if n < 1 then 1 else n * (fact (n - 1)) in 0
+fact 5
+let inc = fun n -> n + 1 in 0
+inc 41
+let rec fib = fun n -> if n < 2 then n else (fib (n - 1)) + (fib (n - 2)) in 0
+fib 10
+let head = fun xs -> match xs with [] -> 0 | h :: t -> h in 0
+head (1 :: (2 :: []))
+let id = fun x -> x in id 7
