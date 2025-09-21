@@ -30,6 +30,20 @@ pub enum Value {
 
 impl Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:#?}", self)
+        match self {
+            Value::Integer(i) => write!(f, "{}", i),
+            Value::Bool(b) => write!(f, "{}", b),
+            Value::Closure {
+                parameter, body, ..
+            } => write!(f, "<fun {} -> {}>", parameter, body),
+            Value::RecClosure {
+                call_name,
+                parameter,
+                body,
+                ..
+            } => write!(f, "<recfun {} {} -> {}>", call_name, parameter, body),
+            Value::Nil => write!(f, "nil"),
+            Value::Cons { car, cdr } => write!(f, "(cons {} {})", car, cdr),
+        }
     }
 }

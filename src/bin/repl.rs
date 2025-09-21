@@ -2,7 +2,7 @@ use anyhow::Result;
 use picocaml::{
     analysis::{parser::parse, tokenizer::tokenize},
     execution::{environment::Environment, evaluation::eval},
-    type_system::{inference::type_inference, type_environment::TypeEnvironment},
+    type_system::{inference::infer, type_environment::TypeEnvironment},
 };
 use rustyline::{DefaultEditor, error::ReadlineError};
 
@@ -24,8 +24,7 @@ fn main() -> Result<()> {
 
                 match parse(tokenize(code.clone())) {
                     Ok(expression) => {
-                        let infered =
-                            type_inference(global_type_environment.clone(), expression.clone());
+                        let infered = infer(global_type_environment.clone(), expression.clone());
                         if let Err(e) = infered {
                             eprintln!("{}", e);
                             continue;
@@ -48,6 +47,8 @@ fn main() -> Result<()> {
                         continue;
                     }
                 }
+
+                code.clear();
             }
             Err(ReadlineError::Interrupted) => {
                 println!("Bye ;)");

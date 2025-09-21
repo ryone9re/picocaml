@@ -60,6 +60,57 @@ pub enum Expression {
 
 impl Display for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:#?}", self)
+        match self {
+            Expression::Integer(i) => write!(f, "{}", i),
+            Expression::Bool(b) => write!(f, "{}", b),
+            Expression::Variable(sym) => write!(f, "{}", sym),
+            Expression::Plus {
+                expression1,
+                expression2,
+            } => write!(f, "(+ {} {})", expression1, expression2),
+            Expression::Minus {
+                expression1,
+                expression2,
+            } => write!(f, "(- {} {})", expression1, expression2),
+            Expression::Times {
+                expression1,
+                expression2,
+            } => write!(f, "(* {} {})", expression1, expression2),
+            Expression::LessThan {
+                expression1,
+                expression2,
+            } => write!(f, "(< {} {})", expression1, expression2),
+            Expression::If {
+                predicate,
+                consequent,
+                alternative,
+            } => write!(f, "(if {} {} {})", predicate, consequent, alternative),
+            Expression::Let {
+                variable,
+                bound,
+                body,
+            } => write!(f, "(let ({} {}) {})", variable, bound, body),
+            Expression::Fun { parameter, body } => write!(f, "(fun {} {})", parameter, body),
+            Expression::App { function, argument } => write!(f, "(app {} {})", function, argument),
+            Expression::LetRec {
+                variable,
+                bound_function,
+                body,
+            } => write!(f, "(letrec ({} {}) {})", variable, bound_function, body),
+            Expression::Nil => write!(f, "nil"),
+            Expression::Cons { car, cdr } => write!(f, "(cons {} {})", car, cdr),
+            Expression::Match {
+                scrutinee,
+                nil_case,
+                cons_pattern,
+            } => {
+                let (car, cdr, cons_body) = cons_pattern;
+                write!(
+                    f,
+                    "(match {} (nil {}) (cons ({} {}) {}))",
+                    scrutinee, nil_case, car, cdr, cons_body
+                )
+            }
+        }
     }
 }

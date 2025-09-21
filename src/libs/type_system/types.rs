@@ -16,12 +16,6 @@ pub enum Type {
     Function { domain: Box<Type>, range: Box<Type> },
 }
 
-impl Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:#?}", self)
-    }
-}
-
 impl Type {
     pub fn apply_substitution(
         self,
@@ -69,5 +63,24 @@ pub fn free_type_variables(t: Type) -> HashSet<Symbol> {
             .collect(),
         Type::List(element_type) => free_type_variables(*element_type),
         Type::Base(_) => HashSet::new(),
+    }
+}
+
+impl Display for Type {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Type::Base(BaseType::Integer) => write!(f, "int"),
+            Type::Base(BaseType::Bool) => write!(f, "bool"),
+            Type::Variable { name } => write!(f, "{}", name),
+            Type::List(ty) => write!(f, "{} list", ty),
+            Type::Function { domain, range } => {
+                let needs_paren = matches!(**domain, Type::Function { .. });
+                if needs_paren {
+                    write!(f, "({}) -> {}", domain, range)
+                } else {
+                    write!(f, "{} -> {}", domain, range)
+                }
+            }
+        }
     }
 }
