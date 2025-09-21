@@ -4,113 +4,78 @@ pub fn tokenize(input: String) -> VecDeque<String> {
     let mut out = VecDeque::new();
     let mut it = input.chars().peekable();
 
-    while let Some(&c) = it.peek() {
-        if c.is_whitespace() {
-            it.next();
+    while it.peek().is_some() {
+        if it.next_if(|c| c.is_whitespace()).is_some() {
             continue;
         }
 
-        if c == ':' {
-            it.next();
-            if matches!(it.peek(), Some(':')) {
-                it.next();
-                out.push_back("::".into());
-                continue;
-            }
-            out.push_back(":".into());
+        if it.next_if_eq(&':').is_some() && it.next_if_eq(&':').is_some() {
+            out.push_back("::".into());
             continue;
         }
 
-        if c == '-' {
-            it.next();
-            if matches!(it.peek(), Some('>')) {
-                it.next();
-                out.push_back("->".into());
-                continue;
-            }
-
-            if matches!(it.peek(), Some(d) if d.is_ascii_digit()) {
-                let mut s = String::from("-");
-                while let Some(&d) = it.peek() {
-                    if d.is_ascii_digit() {
-                        s.push(d);
-                        it.next();
-                    } else {
-                        break;
-                    }
-                }
-                out.push_back(s);
-                continue;
-            }
-            out.push_back("-".into());
+        if it.next_if_eq(&'[').is_some() && it.next_if_eq(&']').is_some() {
+            out.push_back("[]".into());
             continue;
         }
 
-        if c == '(' {
-            it.next();
+        if it.next_if_eq(&'(').is_some() {
             out.push_back("(".into());
             continue;
         }
 
-        if c == ')' {
-            it.next();
+        if it.next_if_eq(&')').is_some() {
             out.push_back(")".into());
             continue;
         }
 
-        if c == '[' {
-            it.next();
-            if matches!(it.peek(), Some(']')) {
-                it.next();
-                out.push_back("[]".into());
-            } else {
-                out.push_back("[".into());
+        if it.next_if_eq(&'-').is_some() {
+            if it.next_if_eq(&'>').is_some() {
+                out.push_back("->".into());
+                continue;
             }
-            continue;
-        }
 
-        if c == ']' {
-            it.next();
-            out.push_back("]".into());
-            continue;
-        }
-
-        if "+*<|=".contains(c) {
-            out.push_back(c.to_string());
-            it.next();
-            continue;
-        }
-
-        if c.is_ascii_digit() {
-            let mut s = String::new();
-            while let Some(&d) = it.peek() {
-                if d.is_ascii_digit() {
-                    s.push(d);
-                    it.next();
-                } else {
-                    break;
-                }
+            let mut integer_literal = String::from("-");
+            while it.peek().is_some_and(|c| c.is_ascii_digit()) {
+                integer_literal.push(it.next().unwrap());
             }
-            out.push_back(s);
+            out.push_back(integer_literal);
             continue;
         }
 
-        if c.is_ascii_lowercase() {
-            let mut s = String::new();
-            while let Some(&ch) = it.peek() {
-                if ch.is_ascii_alphanumeric() || ch == '_' {
-                    s.push(ch);
-                    it.next();
-                } else {
-                    break;
-                }
+        if it.next_if_eq(&'+').is_some() {
+            let mut integer_literal = String::from("+");
+            while it.peek().is_some_and(|c| c.is_ascii_digit()) {
+                integer_literal.push(it.next().unwrap());
             }
-            out.push_back(s);
+            out.push_back(integer_literal);
             continue;
         }
 
-        out.push_back(c.to_string());
-        it.next();
+        if let Some(c) = it.next_if(|&c| "|=*<".contains(c)) {
+            out.push_back(c.into());
+            continue;
+        }
+
+        if it.peek().is_some_and(|c| c.is_ascii_digit()) {
+            let mut integer_literal = String::new();
+            while it.peek().is_some_and(|c| c.is_ascii_digit()) {
+                integer_literal.push(it.next().unwrap());
+            }
+            out.push_back(integer_literal);
+            continue;
+        }
+
+        if it.peek().is_some_and(|c| c.is_ascii_lowercase()) {
+            let mut identifier = String::new();
+            while it.peek().is_some_and(|&c| {
+                c.is_ascii_lowercase() || c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_'
+            }) {
+                identifier.push(it.next().unwrap());
+            }
+            out.push_back(identifier);
+            continue;
+        }
     }
 
     out

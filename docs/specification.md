@@ -21,7 +21,7 @@
          | "match" <expression> "with" <nil> "->" <expression> "|" <identifier> "::" <identifier> "->" <expression>
          | "(" <expression> ")"
 
-<integer_literal> ::= ["-"] <digit> {<digit>}
+<integer_literal> ::= ["-" | "+"] <digit> {<digit>}
 <digit> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
 
 <bool_literal> ::= "true" | "false"
