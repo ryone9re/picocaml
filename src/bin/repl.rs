@@ -1,6 +1,6 @@
 use anyhow::Result;
 use picocaml::{
-    analysis::{parser::parse_expression, tokenizer::tokenize},
+    analysis::{parser::parse, tokenizer::tokenize},
     execution::{environment::Environment, evaluation::eval},
     type_system::{inference::type_inference, type_environment::TypeEnvironment},
 };
@@ -11,12 +11,18 @@ fn main() -> Result<()> {
     let mut global_environment = Environment::default();
 
     let mut rl = DefaultEditor::new()?;
+
+    let mut code = String::new();
     loop {
         match rl.readline(">> ") {
             Ok(line) => {
-                rl.add_history_entry(line.as_str())?;
+                code.push_str(line.as_ref());
+                code.push('\n');
+            }
+            Err(ReadlineError::Eof) => {
+                rl.add_history_entry(code.as_str())?;
 
-                match parse_expression(tokenize(line)) {
+                match parse(tokenize(code.clone())) {
                     Ok(expression) => {
                         let infered =
                             type_inference(global_type_environment.clone(), expression.clone());
@@ -43,7 +49,7 @@ fn main() -> Result<()> {
                     }
                 }
             }
-            Err(ReadlineError::Interrupted | ReadlineError::Eof) => {
+            Err(ReadlineError::Interrupted) => {
                 println!("Bye ;)");
                 break;
             }

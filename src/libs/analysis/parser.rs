@@ -23,11 +23,11 @@ enum ParseError {
     Unclosed,
 }
 
-pub fn parse_expression(mut tokens: VecDeque<String>) -> Result<Expression> {
+pub fn parse(mut tokens: VecDeque<String>) -> Result<Expression> {
     let expr = parse_expr(&mut tokens, 0)?;
     ensure!(
         tokens.is_empty(),
-        ParseError::Unexpected(tokens.pop_front().unwrap()).to_string()
+        ParseError::Unexpected(tokens.pop_front().unwrap())
     );
     Ok(expr)
 }
@@ -273,6 +273,6 @@ fn build_binop(op: &str, lhs: Expression, rhs: Expression) -> Result<Expression>
             car: Box::new(lhs),
             cdr: Box::new(rhs),
         },
-        _ => bail!(ParseError::InvalidSyntax(op.to_string())),
+        _ => bail!(ParseError::InvalidSyntax(op.to_owned())),
     })
 }
