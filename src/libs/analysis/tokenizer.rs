@@ -68,14 +68,14 @@ pub fn tokenize(input: String) -> VecDeque<String> {
 
         if it.peek().is_some_and(|c| c.is_ascii_lowercase()) {
             let mut identifier = String::new();
-            while it.peek().is_some_and(|&c| {
-                c.is_ascii_lowercase() || c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_'
-            }) {
+            while it.peek().is_some_and(|&c| c.is_alphanumeric() || c == '_') {
                 identifier.push(it.next().unwrap());
             }
             out.push_back(identifier);
             continue;
         }
+
+        out.push_back(it.next().unwrap().into());
     }
 
     out

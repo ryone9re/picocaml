@@ -57,6 +57,15 @@ fn is_identifier(tok: &str) -> bool {
     chars.all(|c| c.is_ascii_alphanumeric() || c == '_')
 }
 
+fn starts_primary(tokens: &VecDeque<String>) -> bool {
+    match peek(tokens) {
+        Some("(") | Some("[]") | Some("true") | Some("false") => true,
+        Some(s) if s.parse::<isize>().is_ok() => true,
+        Some(s) if is_identifier(s) => true,
+        _ => false,
+    }
+}
+
 fn precedence(op: &str) -> Option<(i32, Assoc)> {
     match op {
         "*" => Some((70, Assoc::Left)),
@@ -65,6 +74,32 @@ fn precedence(op: &str) -> Option<(i32, Assoc)> {
         "::" => Some((40, Assoc::Right)),
         _ => None,
     }
+}
+
+fn build_binop(op: &str, lhs: Expression, rhs: Expression) -> Result<Expression> {
+    Ok(match op {
+        "+" => Expression::Plus {
+            expression1: Box::new(lhs),
+            expression2: Box::new(rhs),
+        },
+        "-" => Expression::Minus {
+            expression1: Box::new(lhs),
+            expression2: Box::new(rhs),
+        },
+        "*" => Expression::Times {
+            expression1: Box::new(lhs),
+            expression2: Box::new(rhs),
+        },
+        "<" => Expression::LessThan {
+            expression1: Box::new(lhs),
+            expression2: Box::new(rhs),
+        },
+        "::" => Expression::Cons {
+            car: Box::new(lhs),
+            cdr: Box::new(rhs),
+        },
+        _ => bail!(ParseError::InvalidSyntax(op.to_owned())),
+    })
 }
 
 fn parse_expr(tokens: &mut VecDeque<String>, min_bp: i32) -> Result<Expression> {
@@ -90,56 +125,6 @@ fn parse_expr(tokens: &mut VecDeque<String>, min_bp: i32) -> Result<Expression> 
         lhs = build_binop(&op_s, lhs, rhs)?;
     }
     Ok(lhs)
-}
-
-fn parse_application(tokens: &mut VecDeque<String>) -> Result<Expression> {
-    let mut func = parse_atom(tokens)?;
-    loop {
-        match peek(tokens) {
-            Some("then" | "else" | "in" | "|" | "->" | "with") => break,
-            Some(op) if precedence(op).is_some() => break,
-            None => break,
-            _ => {
-                if !starts_primary(tokens) {
-                    break;
-                }
-                let arg = parse_atom(tokens)?;
-                func = Expression::App {
-                    function: Box::new(func),
-                    argument: Box::new(arg),
-                };
-            }
-        }
-    }
-    Ok(func)
-}
-
-fn starts_primary(tokens: &VecDeque<String>) -> bool {
-    match peek(tokens) {
-        Some("(") | Some("[]") | Some("true") | Some("false") => true,
-        Some(s) if s.parse::<isize>().is_ok() => true,
-        Some(s) if is_identifier(s) => true,
-        _ => false,
-    }
-}
-
-fn parse_atom(tokens: &mut VecDeque<String>) -> Result<Expression> {
-    match next(tokens).ok_or(ParseError::Empty)? {
-        t if t.parse::<isize>().is_ok() => Ok(Expression::Integer(t.parse::<isize>().unwrap())),
-        t if t == "true" => Ok(Expression::Bool(true)),
-        t if t == "false" => Ok(Expression::Bool(false)),
-        t if t == "(" => {
-            let e = parse_expr(tokens, 0)?;
-            match next(tokens) {
-                Some(s) if s == ")" => Ok(e),
-                Some(s) => bail!(ParseError::Unexpected(s)),
-                None => bail!(ParseError::Unclosed),
-            }
-        }
-        t if t == "[]" => Ok(Expression::Nil),
-        t if is_identifier(&t) => Ok(Expression::Variable(t)),
-        other => bail!(ParseError::Unexpected(other)),
-    }
 }
 
 fn parse_if(tokens: &mut VecDeque<String>) -> Result<Expression> {
@@ -251,28 +236,43 @@ fn parse_match(tokens: &mut VecDeque<String>) -> Result<Expression> {
     })
 }
 
-fn build_binop(op: &str, lhs: Expression, rhs: Expression) -> Result<Expression> {
-    Ok(match op {
-        "+" => Expression::Plus {
-            expression1: Box::new(lhs),
-            expression2: Box::new(rhs),
-        },
-        "-" => Expression::Minus {
-            expression1: Box::new(lhs),
-            expression2: Box::new(rhs),
-        },
-        "*" => Expression::Times {
-            expression1: Box::new(lhs),
-            expression2: Box::new(rhs),
-        },
-        "<" => Expression::LessThan {
-            expression1: Box::new(lhs),
-            expression2: Box::new(rhs),
-        },
-        "::" => Expression::Cons {
-            car: Box::new(lhs),
-            cdr: Box::new(rhs),
-        },
-        _ => bail!(ParseError::InvalidSyntax(op.to_owned())),
-    })
+fn parse_application(tokens: &mut VecDeque<String>) -> Result<Expression> {
+    let mut func = parse_atom(tokens)?;
+    loop {
+        match peek(tokens) {
+            Some("then" | "else" | "in" | "|" | "->" | "with") => break,
+            Some(op) if precedence(op).is_some() => break,
+            None => break,
+            _ => {
+                if !starts_primary(tokens) {
+                    break;
+                }
+                let arg = parse_atom(tokens)?;
+                func = Expression::App {
+                    function: Box::new(func),
+                    argument: Box::new(arg),
+                };
+            }
+        }
+    }
+    Ok(func)
+}
+
+fn parse_atom(tokens: &mut VecDeque<String>) -> Result<Expression> {
+    match next(tokens).ok_or(ParseError::Empty)? {
+        t if t.parse::<isize>().is_ok() => Ok(Expression::Integer(t.parse::<isize>().unwrap())),
+        t if t == "true" => Ok(Expression::Bool(true)),
+        t if t == "false" => Ok(Expression::Bool(false)),
+        t if t == "(" => {
+            let e = parse_expr(tokens, 0)?;
+            match next(tokens) {
+                Some(s) if s == ")" => Ok(e),
+                Some(s) => bail!(ParseError::Unexpected(s)),
+                None => bail!(ParseError::Unclosed),
+            }
+        }
+        t if t == "[]" => Ok(Expression::Nil),
+        t if is_identifier(&t) => Ok(Expression::Variable(t)),
+        other => bail!(ParseError::Unexpected(other)),
+    }
 }
