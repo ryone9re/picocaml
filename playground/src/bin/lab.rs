@@ -38,7 +38,7 @@ fn serve_web() -> Result<()> {
 
     if !command_exists("wasm-bindgen") {
         anyhow::bail!(
-            "wasm-bindgen is required. Install it with: cargo install wasm-bindgen-cli --version 0.2.126 --locked"
+            "wasm-bindgen is required. Install the version pinned in Cargo.lock; see the README for the setup command"
         );
     }
 

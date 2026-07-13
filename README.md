@@ -18,7 +18,9 @@ Install the wasm target and `wasm-bindgen-cli` once:
 
 ```sh
 rustup target add wasm32-unknown-unknown
-cargo install wasm-bindgen-cli --version 0.2.126 --locked
+version=$(cargo metadata --locked --format-version 1 \
+  | jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')
+cargo install wasm-bindgen-cli --version "$version" --locked
 cargo run -p picocaml-playground --bin lab
 ```
 
