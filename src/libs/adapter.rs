@@ -1,9 +1,8 @@
 use std::{
     collections::HashSet,
     ops::{Add, Mul, Sub},
+    sync::atomic::{AtomicUsize, Ordering},
 };
-
-use nanoid::nanoid;
 
 use crate::type_system::types::Type;
 
@@ -33,7 +32,10 @@ pub(crate) fn r_lt(lhs: RInteger, rhs: RInteger) -> RBool {
 }
 
 pub(crate) fn unique_symbol() -> Symbol {
-    nanoid!()
+    static NEXT_SYMBOL_ID: AtomicUsize = AtomicUsize::new(0);
+
+    let next_id = NEXT_SYMBOL_ID.fetch_add(1, Ordering::Relaxed);
+    format!("_t{next_id}")
 }
 
 pub(crate) type SymbolTraverseHistory = HashSet<Symbol>;

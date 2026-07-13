@@ -3,12 +3,17 @@ name = "picocaml"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+members = [".", "playground"]
+resolver = "3"
+
 [lib]
 name = "picocaml"
 path = "src/libs/lib.rs"
 
 [dependencies]
-anyhow = "1.0.100"
-thiserror = "2.0.16"
-nanoid = "0.4.0"
-rustyline = "17.0.1"
+anyhow = "1.0.103"
+thiserror = "2.0.18"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+rustyline = "18.0.1"
