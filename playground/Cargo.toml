@@ -1,0 +1,14 @@
+[package]
+name = "picocaml-playground"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+anyhow = "1.0.103"
+picocaml = { path = ".." }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.150"
+wasm-bindgen = "0.2.126"

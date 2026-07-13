@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#111827" />
+    <title>picocaml lab</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">A tiny functional language observatory</p>
+          <h1>picocaml <span>lab</span></h1>
+          <p class="subtitle">型推論して、評価して、処理系の中身を眺める。</p>
+        </div>
+        <a class="source-link" href="https://github.com/ryone9re/picocaml" target="_blank" rel="noreferrer">source ↗</a>
+      </header>
+
+      <section class="workspace">
+        <div class="editor-panel panel">
+          <div class="panel-heading">
+            <span>program.picocaml</span>
+            <span id="status" class="status">ready</span>
+          </div>
+          <textarea id="source" spellcheck="false" aria-label="picocaml source">let twice = fun x -> x * 2 in twice 21</textarea>
+          <div class="toolbar">
+            <button id="run" class="primary">Run <span>⌘↵</span></button>
+            <button id="example">Examples</button>
+            <button id="share">Copy link</button>
+          </div>
+          <div id="examples" class="examples hidden"></div>
+        </div>
+
+        <div class="results">
+          <article class="panel result-card type-card">
+            <div class="panel-heading"><span>inferred type</span><span class="badge">HM</span></div>
+            <pre id="type" class="result empty">Run a program to see its type.</pre>
+          </article>
+          <article class="panel result-card value-card">
+            <div class="panel-heading"><span>value</span><span class="badge">eval</span></div>
+            <pre id="value" class="result empty">—</pre>
+          </article>
+        </div>
+      </section>
+
+      <section class="details">
+        <article class="panel detail-card">
+          <div class="panel-heading"><span>AST</span><span class="hint">debug view</span></div>
+          <pre id="ast" class="detail-result">—</pre>
+        </article>
+        <article id="error-card" class="panel detail-card error-card hidden">
+          <div class="panel-heading"><span id="error-title">error</span><span class="hint">no evaluation</span></div>
+          <pre id="error" class="detail-result"></pre>
+        </article>
+      </section>
+
+      <footer>
+        Runs entirely in your browser via WebAssembly. No server, no telemetry.
+      </footer>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
