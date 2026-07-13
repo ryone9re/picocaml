@@ -1,0 +1,50 @@
+name: Publish playground
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install wasm-bindgen
+        run: cargo install wasm-bindgen-cli --version 0.2.126 --locked
+
+      - name: Build WebAssembly
+        run: cargo build -p picocaml-playground --release --target wasm32-unknown-unknown --lib
+
+      - name: Assemble site
+        run: |
+          mkdir -p site/pkg
+          cp -R playground/web/. site/
+          wasm-bindgen target/wasm32-unknown-unknown/release/picocaml_playground.wasm \
+            --target web --out-dir site/pkg
+          touch site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - uses: actions/deploy-pages@v5
