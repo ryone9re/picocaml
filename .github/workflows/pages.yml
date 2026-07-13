@@ -26,14 +26,25 @@ jobs:
 
       - uses: actions/cache@v6
         with:
-          path: ~/.cargo/registry
+          path: |
+            ~/.cargo/bin/wasm-bindgen
+            ~/.cargo/bin/wasm-bindgen-test-runner
+            ~/.cargo/bin/wasm2es6js
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
 
       - name: Install wasm-bindgen
         run: |
           version=$(cargo metadata --locked --format-version 1 \
             | jq -r '.packages[] | select(.name == "wasm-bindgen") | .version')
-          cargo install wasm-bindgen-cli --version "$version" --locked
+          installed=$(wasm-bindgen --version 2>/dev/null | awk '{print $2}' || true)
+          if [ "$installed" != "$version" ]; then
+            cargo install wasm-bindgen-cli --version "$version" --locked
+          fi
 
       - name: Build WebAssembly
         run: cargo build -p picocaml-playground --release --target wasm32-unknown-unknown --lib
